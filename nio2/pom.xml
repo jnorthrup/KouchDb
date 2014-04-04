@@ -3,12 +3,11 @@
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <groupId>cinderblock</groupId>
+    <groupId>kouchdb</groupId>
     <artifactId>parent</artifactId>
     <version>0.0.0.1</version>
   </parent>
-  <groupId>cinderblock</groupId>
-  <artifactId>nio2</artifactId>
+    <artifactId>nio2</artifactId>
   <version>0.0.0.1</version>
   <name>nio2</name>
   <url>http://maven.apache.org</url>
