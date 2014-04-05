@@ -1,22 +1,114 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-  <modelVersion>4.0.0</modelVersion>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
 
-  <groupId>kouchdb</groupId>
-  <artifactId>parent</artifactId>
-  <version>0.0.0.1</version>
-  <packaging>pom</packaging>
+    <groupId>kouchdb</groupId>
+    <artifactId>parent</artifactId>
+    <version>0.0.0.1</version>
+    <packaging>pom</packaging>
 
-  <name>KouchDb parent</name>
-<description>
-    KouchDb aims to be the junction between btrfs kernel, boost asio, java NIO[2], and couchdb for deployment of rest-based services.
-</description>
-  <properties>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-  </properties>
+    <name>KouchDb parent</name>
+    <description>
+        KouchDb aims to be the junction between btrfs kernel, boost asio, java NIO[2], and couchdb for deployment of
+        rest-based services.
+    </description>
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
 
-  <modules>
-    <module>cxxdb</module>
-    <module>nio2</module>
-  </modules>
+    <modules>
+        <module>cxxdb</module>
+        <module>nio2</module>
+        <module>kvdb</module>
+    </modules>
+    <build>
+        <pluginManagement>
+            <plugins><plugin>
+                <groupId>com.googlecode.maven-java-formatter-plugin</groupId>
+                <artifactId>maven-java-formatter-plugin</artifactId>
+                <version>0.3.1</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>format</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <compilerSource>1.8</compilerSource>
+                    <compilerCompliance>1.8</compilerCompliance>
+                    <compilerTargetPlatform>1.8</compilerTargetPlatform>
+                    <!--<configFile>${project.basedir}/../fmt/ugh.xml</configFile>-->
+                    <!--<configFile>https://raw.github.com/jnorthrup/RelaxFactory/x0uchdb/fmt/gwt-format.xml</configFile>-->
+
+                    <!--http://code.google.com/p/google-web-toolkit/source/browse/trunk/eclipse/settings/code-style/gwt-format.xml</configFile>&ndash;&gt;-->
+                    <configFile>${project.basedir}/../fmt/gwt-format.xml</configFile>
+                    <lineEnding>LF</lineEnding>
+                </configuration>
+            </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>3.1</version>
+                    <configuration>
+                        <source>1.8</source>
+                        <target>1.8</target>
+                    </configuration>
+                </plugin>
+
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-site-plugin</artifactId>
+                    <version>3.3</version>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>    <reporting>
+    <plugins>
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-report-plugin</artifactId>
+            <version>2.12.4</version>
+        </plugin>
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-jxr-plugin</artifactId>
+            <version>2.3</version>
+        </plugin>
+        <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>taglist-maven-plugin</artifactId>
+            <version>2.4</version>
+        </plugin>
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-pmd-plugin</artifactId>
+            <version>2.7.1</version>
+            <configuration>
+                <targetJdk>${java.specification.version}</targetJdk>
+                <rulesets>
+                    <!--<ruleset>rulesets/android.xml</ruleset>-->
+                    <ruleset>rulesets/logging-java.xml</ruleset>
+                    <!--<ruleset>rulesets/j2ee.xml</ruleset>-->
+                    <ruleset>rulesets/design.xml</ruleset>
+                    <!--<ruleset>rulesets/basic-jsp.xml</ruleset>-->
+                    <ruleset>rulesets/basic.xml</ruleset>
+                    <ruleset>rulesets/imports.xml</ruleset>
+                    <ruleset>rulesets/typeresolution.xml</ruleset>
+                    <ruleset>rulesets/unusedcode.xml</ruleset>
+                    <ruleset>rulesets/controversial.xml</ruleset>
+                    <ruleset>rulesets/coupling.xml</ruleset>
+                    <ruleset>rulesets/strictexception.xml</ruleset>
+                    <ruleset>rulesets/codesize.xml</ruleset>
+                    <ruleset>rulesets/junit.xml</ruleset>
+                    <ruleset>rulesets/optimizations.xml</ruleset>
+                    <ruleset>rulesets/basic-jsf.xml</ruleset>
+                    <ruleset>rulesets/favorites.xml</ruleset>
+                </rulesets>
+            </configuration>
+        </plugin>
+    </plugins>
+</reporting>
+
 </project>

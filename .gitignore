@@ -11,3 +11,11 @@
 *.lai
 *.la
 *.a
+
+*.iml
+*.ipr
+*.class
+*.bak
+*~
+target
+.idea
