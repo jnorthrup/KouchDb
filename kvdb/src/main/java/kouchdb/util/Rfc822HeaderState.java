@@ -683,8 +683,8 @@ public class Rfc822HeaderState {
             }
         }
 
-        public String method() {
-            return methodProtocol(); //To change body of overridden methods use File | Settings | File Templates.
+           public HttpMethod method() {
+            return HttpMethod.valueOf(methodProtocol()); //To change body of overridden methods use File | Settings | File Templates.
         }
 
         public HttpRequest method(HttpMethod method) {
