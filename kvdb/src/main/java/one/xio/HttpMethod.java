@@ -18,5 +18,4 @@ import static java.lang.StrictMath.min;
  */
 public enum HttpMethod {
   GET, POST, PUT, HEAD, DELETE, TRACE, CONNECT, OPTIONS, HELP, VERSION;
-  public static Charset UTF8 = Charset.forName("UTF8");
 }

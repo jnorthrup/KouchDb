@@ -1,5 +1,7 @@
 package one.xio;
 
+import kouchdb.util.Utf8;
+
 import java.net.URLDecoder;
 import java.nio.ByteBuffer;
 import java.util.LinkedHashMap;
@@ -1400,9 +1402,22 @@ public enum HttpHeaders {
    * The HTTP access authentication process is described in "HTTP Authentication: Basic and Digest Access Authentication" [43]. User agents are advised to take special care in parsing the WWW- Authenticate field value as it might contain more than one challenge, or if more than one WWW-Authenticate header field is provided, the contents of a challenge itself can contain a comma-separated list of authentication parameters.
    */
 
-  WWW$2dAuthenticate, X$2dForwarded$2dFor, ;
+  WWW$2dAuthenticate, X$2dForwarded$2dFor,
+
+    //ws here,,,,
+//     Upgrade/*: websocket*/,
+//    Connection/*: Upgrade*/,
+    Sec$2dWebSocket$2dKey/*: dGhlIHNhbXBsZSBub25jZQ==*/,
+    Origin/*: http://example.com*/,
+    Sec$2dWebSocket$2dProtocol/*: chat, superchat*/,
+    Sec$2dWebSocket$2dVersion/*: 13*/,
+    Sec$2dWebSocket$2dAccept,
+
+
+
+    ;
   private final String header = URLDecoder.decode(name().replace('$', '%'));
-  private final ByteBuffer token = HttpMethod.UTF8.encode(header);
+  private final ByteBuffer token = Utf8.UTF8.encode(header);
   private int tokenLen = token.limit();
 
   /**
@@ -1423,7 +1438,7 @@ public enum HttpHeaders {
       int p3 = headers.position();
 
       String key =
-          HttpMethod.UTF8.decode((ByteBuffer) headers.position(p1).limit(p2 - 1)).toString().trim();
+          Utf8.UTF8.decode((ByteBuffer) headers.position(p1).limit(p2 - 1)).toString().trim();
       if (key.length() > 0) {
         linkedHashMap.put(key, new int[] {p2, p3});
       }

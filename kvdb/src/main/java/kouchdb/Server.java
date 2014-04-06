@@ -1,75 +1,83 @@
 package kouchdb;
 
-import javolution.util.FastMap;
+ import kouchdb.util.Rfc822HeaderState;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.*;
+ import static java.lang.StrictMath.min;
 
-import static java.lang.Math.abs;
-import static java.lang.StrictMath.min;
+/**
+ * ws-only http server
+ *   The handshake from the client looks as follows:
 
+ GET /chat HTTP/1.1
+ Host: server.example.com
+ Upgrade: websocket
+ Connection: Upgrade
+ Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==
+ Origin: http://example.com
+ Sec-WebSocket-Protocol: chat, superchat
+ Sec-WebSocket-Version: 13
+
+ The handshake from the server looks as follows:
+
+ HTTP/1.1 101 Switching Protocols
+ Upgrade: websocket
+ Connection: Upgrade
+ Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=
+ Sec-WebSocket-Protocol: chat
+
+ */
 public class Server{
-    /**
-     * byte-compare of suffixes
-     *
-     * @param terminator  the token used to terminate presumably unbounded growth of a list of buffers
-     * @param currentBuff current ByteBuffer which does not necessarily require a list to perform suffix checks.
-     * @param prev        a linked list which holds previous chunks
-     * @return whether the suffix composes the tail bytes of current and prev buffers.
-     */
-    public static boolean suffixMatchChunks(byte[] terminator, ByteBuffer currentBuff,
-                                            ByteBuffer... prev) {
-        ByteBuffer tb = currentBuff;
-        int prevMark = prev.length;
-        int bl = terminator.length;
-        int rskip = 0;
-        int i = bl - 1;
-        while (0 <= i) {
-            rskip++;
-            int comparisonOffset = tb.position() - rskip;
-            if (0 > comparisonOffset) {
-                prevMark--;
-                if (0 <= prevMark) {
-                    tb = prev[prevMark];
-                    rskip = 0;
-                    i++;
-                } else {
-                    return false;
-
-                }
-            } else if (terminator[i] != tb.get(comparisonOffset)) {
-                return false;
-            }
-            i--;
-        }
-        return true;
-    }
-
+    final static boolean $DBG= "true".equals(Config.get("KOUCH_DEBUG", "false"));
 
     public Server() {
 
         try (AsynchronousServerSocketChannel x = AsynchronousServerSocketChannel.open()) {
-      x.accept(new FastMap(), new CompletionHandler<AsynchronousSocketChannel, FastMap>() {
+          x.accept(null, new CompletionHandler<AsynchronousSocketChannel, Void>() {
+          public boolean hasHeaders;
+          private Rfc822HeaderState rfc822HeaderState;
+          ByteBuffer cursor= ByteBuffer.allocateDirect(1 << 10) ;
           @Override
-          public void completed(AsynchronousSocketChannel result, FastMap attachment) {
-              result
-                      .read(ByteBuffer.allocateDirect(8 << 10), attachment,
-                              new CompletionHandler<Integer, FastMap>() {
-                                  @Override
-                                  public void completed(Integer result, FastMap attachment) {
+          public void completed(AsynchronousSocketChannel socketChannel, Void attachment) {
 
-                                  }
+              socketChannel.read(cursor , attachment, new CompletionHandler<Integer, Void>() {
+                          @Override
+                          public void completed(Integer result, Void attachment) {
+                              rfc822HeaderState = new Rfc822HeaderState();
+                              Rfc822HeaderState.HttpRequest httpRequest = rfc822HeaderState.$req();
+                              hasHeaders = httpRequest.apply((ByteBuffer) cursor.mark().rewind());
+                              if(!cursor.hasRemaining())cursor=ByteBuffer.allocateDirect(cursor.limit()<<2).put((ByteBuffer) cursor.rewind());
+                              if (!hasHeaders) socketChannel.read(cursor, null, this);
+                              else
+                              this.parseRequest();
+                          }
 
-                                  @Override
-                                  public void failed(Throwable exc, FastMap attachment) {
+                          /**
+                           *
+                           assumes:
+                           cursor is an unfinished ByteBuffer
+                           exists with all the state needed from surrounding enclosures.
+                           */
+                          void parseRequest() {
 
-                                  }
-                              });
+                          }
+
+
+                          @Override
+                          public void failed(Throwable exc, Void attachment) {
+
+          //no longer need $DBG!
+              exc.printStackTrace();
+                          }
+                      }
+              );
           }
-
           @Override
-          public void failed(Throwable exc, FastMap attachment) {
+          public void failed(Throwable exc, Void attachment) {
+          //no longer need $DBG!
+              exc.printStackTrace();
 
           }
       });
@@ -77,7 +85,7 @@ public class Server{
             e.printStackTrace();
         }
     }
-
+ 
     public static String wheresWaldo(int... depth) {
       int d = depth.length > 0 ? depth[0] : 2;
       Throwable throwable = new Throwable();
