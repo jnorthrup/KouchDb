@@ -1,11 +1,10 @@
 package one.xio;
 
-import kouchdb.util.Utf8;
-
 import java.net.URLDecoder;
 import java.nio.ByteBuffer;
-import java.util.LinkedHashMap;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * User: jim
@@ -1417,7 +1416,7 @@ public enum HttpHeaders {
 
     ;
   private final String header = URLDecoder.decode(name().replace('$', '%'));
-  private final ByteBuffer token = Utf8.UTF8.encode(header);
+  private final ByteBuffer token = StandardCharsets.UTF_8.encode(header);
   private int tokenLen = token.limit();
 
   /**
@@ -1428,7 +1427,7 @@ public enum HttpHeaders {
   public static Map<String, int[]> getHeaders(ByteBuffer headers) {
     headers.rewind();
     int l = headers.limit();
-    Map<String, int[]> linkedHashMap = new LinkedHashMap();
+    Map<String, int[]> linkedHashMap = new TreeMap();
     while (headers.hasRemaining() && '\n' != headers.get());
     while (headers.hasRemaining()) {
       int p1 = headers.position();
@@ -1438,7 +1437,7 @@ public enum HttpHeaders {
       int p3 = headers.position();
 
       String key =
-          Utf8.UTF8.decode((ByteBuffer) headers.position(p1).limit(p2 - 1)).toString().trim();
+          StandardCharsets.UTF_8.decode((ByteBuffer) headers.position(p1).limit(p2 - 1)).toString().trim();
       if (key.length() > 0) {
         linkedHashMap.put(key, new int[] {p2, p3});
       }
