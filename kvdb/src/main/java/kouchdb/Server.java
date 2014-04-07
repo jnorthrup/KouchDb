@@ -378,7 +378,7 @@ public class Server {
                                         socketChannel.write(as, null, new CompletionHandler<Integer, Object>() {
                                             @Override
                                             public void completed(Integer result, Object attachment) {
-                                                new WsCommandRunner(socketChannel);
+                                                new WsFrameDecoder(socketChannel);
 
                                             }
 
