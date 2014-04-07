@@ -139,19 +139,7 @@ import java.nio.channels.CompletionHandler;
 
 
 public class WsFrameDecoder {
-    public enum OpCode {
-        continuation, text, binary,
-        reservedDataFrame3,
-        reservedDataFrame4,
-        reservedDataFrame5,
-        reservedDataFrame6,
-        reservedDataFrame7,
-        close,
-        ping,
-        pong
-    }
-
-    private long maskingKey;
+    private byte[] maskingKey;
     private long len;
     private boolean isMasked;
     private OpCode opcode;
@@ -162,40 +150,58 @@ public class WsFrameDecoder {
         socketChannel.read(dst, null, new CompletionHandler<Integer, Void>() {
 
 
-            private ByteBuffer payload;
+                    private ByteBuffer payload;
 
-            @Override
-            public void completed(Integer result, Void attachment) {
-                if (dst.position() > 3) {
-                    dst.flip();
-                    byte b = dst.get();
-                    isFin = (b & 0b10000000) != 0;
-                    opcode = OpCode.values()[b & 0b00001111];
-                    b = dst.get();
-                    isMasked = (b & 0b10000000) != 0;
-                    int i = b & 0b01111111;
-                    switch (i) {
-                        case 126:
-                            len = dst.getShort()& 0xffff;
-                            break;
-                        case 127:
-                            len = dst.getLong();
-                            break;
-                        default:
-                            len = i;
-                            break;
+                    @Override
+                    public void completed(Integer result, Void attachment) {
+                        if (dst.position() > 3) {
+                            dst.flip();
+                            byte b = dst.get();
+                            isFin = (b & 0b10000000) != 0;
+                            opcode = OpCode.values()[b & 0b00001111];
+                            b = dst.get();
+                            isMasked = (b & 0b10000000) != 0;
+                            int i = b & 0b01111111;
+                            switch (i) {
+                                case 126:
+                                    len = dst.getShort() & 0xffff;
+                                    break;
+                                case 127:
+                                    len = dst.getLong();
+                                    break;
+                                default:
+                                    len = i;
+                                    break;
+                            }
+                            if (isMasked) dst.get(maskingKey = new byte[4]);
+                            if (len > Integer.MAX_VALUE) throw new RuntimeException("length too large: " + len);
+                            payload = ByteBuffer.allocateDirect((int) len).put(dst);
+                        }
                     }
-                    if (isMasked) maskingKey = dst.getInt() & 0xffffffff;
-                    if (len > Integer.MAX_VALUE) throw new RuntimeException("length too large: " + len);
-                    payload = ByteBuffer.allocateDirect((int) len).put(dst);
+
+                    @Override
+                    public void failed(Throwable exc, Void attachment) {
+
+                    }
                 }
-            }
-
-            @Override
-            public void failed(Throwable exc, Void attachment) {
-
-            }
-        }
         );
+    }
+
+    public static void applyMask(byte[] mask, ByteBuffer data) {
+        ByteBuffer overwrite = data.duplicate();
+        int c = 0;
+        while (data.hasRemaining()) overwrite.put((byte) ((mask[c++ % 4] & 0xff ^ data.get() & 0xff) & 0xff));
+    }
+
+    public enum OpCode {
+        continuation, text, binary,
+        reservedDataFrame3,
+        reservedDataFrame4,
+        reservedDataFrame5,
+        reservedDataFrame6,
+        reservedDataFrame7,
+        close,
+        ping,
+        pong
     }
 }
