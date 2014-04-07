@@ -2,12 +2,8 @@ package kouchdb;
 
 
 
-/*
-
 public enum Command{
-    CreateDb{
-
-    },
+    CreateDb ,
     DeleteDb,
     PersistDoc,
     Fetchdoc,
@@ -35,4 +31,3 @@ public enum Command{
         System.out.println("}");
     }
 }
-*/

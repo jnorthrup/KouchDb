@@ -144,14 +144,11 @@ public class WsFrameDecoder {
     private boolean isMasked;
     private OpCode opcode;
     private boolean isFin;
+    private ByteBuffer payload;
 
     public WsFrameDecoder(AsynchronousSocketChannel socketChannel) {
         ByteBuffer dst = ByteBuffer.allocateDirect(8 << 10);
         socketChannel.read(dst, null, new CompletionHandler<Integer, Void>() {
-
-
-                    private ByteBuffer payload;
-
                     @Override
                     public void completed(Integer result, Void attachment) {
                         if (dst.position() > 3) {
@@ -178,7 +175,6 @@ public class WsFrameDecoder {
                             payload = ByteBuffer.allocateDirect((int) len).put(dst);
                         }
                     }
-
                     @Override
                     public void failed(Throwable exc, Void attachment) {
 
@@ -190,7 +186,7 @@ public class WsFrameDecoder {
     public static void applyMask(byte[] mask, ByteBuffer data) {
         ByteBuffer overwrite = data.duplicate();
         int c = 0;
-        while (data.hasRemaining()) overwrite.put((byte) ((mask[c++ % 4] & 0xff ^ data.get() & 0xff) & 0xff));
+        while (data.hasRemaining()) overwrite.put((byte) ((mask[c++ % mask.length] & 0xff ^ data.get() & 0xff) & 0xff));
     }
 
     public enum OpCode {
