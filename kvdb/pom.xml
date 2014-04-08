@@ -72,8 +72,8 @@
                 <artifactId>protostuff-maven-plugin</artifactId>
                 <version>${protostuff.version}</version>
                 <configuration>
-                    <cacheProtos>true</cacheProtos>
-                    <sourceBaseDir>src/main/proto</sourceBaseDir>
+                    <!--<cacheProtos>true</cacheProtos>-->
+                    <!--<sourceBaseDir>src/main/proto</sourceBaseDir>-->
 
                     <protoModules>
                         <protoModule>
@@ -88,39 +88,40 @@
                                 <property>
                                 <name>generate_helper_methods</name>
                             </property>
+                                <property>
+                                <name>generate_field_map</name>
+                            </property>
+                                <property>
+                                    <name>separate_schema</name>
+                                </property>
                             </options>
                            <!-- <options>
                                 <property>
                                     <name>generate_field_map</name>
                                 </property>
-                                <property>
-                                    <name>generate_field_map</name>
-                                </property>
-                                <property>
-                                    <name>separate_schema</name>
-                                </property>
                             </options>-->
-                        </protoModule>
+                        </protoModule><!--
                         <protoModule>
                             <source>src/main/proto/Commands.proto</source>
-                            <outputDir>${project.build.directory}/alt/generated-sources</outputDir>
+                            <outputDir>${project.build.directory}/jso/generated-sources</outputDir>
                             <output>gwt_overlay</output>
                             <encoding>UTF-8</encoding>
                             <options>
-                                <property><!--generates a mapping between the field number and field name.
+                                <property>&lt;!&ndash;generates a mapping between the field number and field name.
     If on, you can serialize json encoded messages writing either its field name or field number.
     boolean numeric = false;
-    JsonIOUtil.writeTo(out, message, numeric);-->
+    JsonIOUtil.writeTo(out, message, numeric);&ndash;&gt;
                                     generate_field_map
                                 </property>
                             </options>
 
-                        </protoModule>                        <protoModule>
+                        </protoModule>-->
+                        <!--<protoModule>
                         <source>src/main/proto/Commands.proto</source>
-                        <outputDir>${project.build.directory}/jso/generated-sources</outputDir>
+                        <outputDir>${project.build.directory}/alt/generated-sources</outputDir>
                         <output>java_v2protoc_schema</output>
                         <encoding>UTF-8</encoding>
-                       <!-- <options>
+                       &lt;!&ndash; <options>
                             numeric
 
                             the encoded property name of a message is referenced by its field number.
@@ -144,9 +145,9 @@
                             the matching message will implement the given interface.
                             Note that gwt overlays can implement interfaces if gwt-2.0 +
 
-                        </options>-->
+                        </options>&ndash;&gt;
 
-                    </protoModule>
+                    </protoModule>-->
                     </protoModules>
                 </configuration>
                 <executions>

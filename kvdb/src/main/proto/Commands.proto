@@ -31,14 +31,6 @@ option java_outer_classname = "WebsocketCommands";
  */
 message CreateDb {
     optional string name = 1;
-    /**
-     * <p>
- * Options
- * options.name: You can omit the name argument and specify it via options instead. Note that the name is required.
- * options.auto_compaction: This turns on auto compaction (experimental). Defaults to false.
-optional  * options.cache: Appends a random string to the end of all HTTP  requests to avoid them being cached on IE. Set this to true to prevent this happening  = 9999;
- * options.adapter: One of 'idb', 'leveldb', 'websql', or 'http'. If unspecified, PouchDB will infer this automatically, preferring IndexedDB to WebSQL in browsers that support both (i.e. Chrome, Opera and Android 4.4+).
-*/
     message CreateOptions {
 
         /** You can omit the name argument and specify it via options instead. Note that the name is required.*/
@@ -178,19 +170,6 @@ message PersistDoc {
 message Fetchdoc {
     required string db = 1;
     required string doc = 2;
-
-    /**Options
-        * All options default to false unless otherwise specified.
-        * <p>
-        * options.rev: Fetch specific revision of a document. Defaults to winning revision (see the CouchDB guide).
-        * options.revs: Include revision history of the document.
-        * options.revs_info: Include a list of revisions of the document, and their availability.
-        * options.open_revs: Fetch all leaf revisions if open_revs="all" or fetch all leaf revisions specified in open_revs array. Leaves will be returned in the same order as specified in input array.
-        * options.conflicts: If specified, conflicting leaf revisions will be attached in _conflicts array.
-        * options.attachments: Include attachment data.
-        * options.local_seq: Include sequence number of the revision in the database.
-        * options.ajax: An object of options to be sent to the ajax requester. In Node they are sent ver batim to request with the exception of:
-        * options.ajax.cache: Appends a random string to the end of all HTTP GET requests to avoid them being cached on IE. Set this to true to prevent this happening.*/
     message FetchOptions {
         /**
          * Fetch specific revision of a document. Defaults to winning revision (see couchdb guide.
@@ -327,7 +306,8 @@ message BatchCreate {
  * }
  */
 message BatchFetch {
-    required string db = 1; /**Options
+    required string db = 1;
+    /**Options
      * All options default to false unless otherwise specified.
      * <p>
      * <p>
@@ -741,12 +721,18 @@ message QueryDb {
         optional bool include_docs = 3;
         /** Include conflicts in the _conflicts field of a doc.*/
         optional bool conflicts = 4;
-        /** Include attachment data.*/ optional bool attachments = 5;
-        /**  documents with keys in a certain range  ;*/ optional string startkey = 6;
-        /**  documents with keys in a certain range  ;*/ optional string endkey = 7;
-        /** Reverse the order of the output documents.*/ optional bool descending = 8;
-        /** Only return rows matching this string key.*/ optional string key = 9;
-        /** Array of string keys to fetch in a single shot.*/ repeated string keys = 10;
+        /** Include attachment data.*/
+        optional bool attachments = 5;
+        /**  documents with keys in a certain range  ;*/
+        optional string startkey = 6;
+        /**  documents with keys in a certain range  ;*/
+        optional string endkey = 7;
+        /** Reverse the order of the output documents.*/
+        optional bool descending = 8;
+        /** Only return rows matching this string key.*/
+        optional string key = 9;
+        /** Array of string keys to fetch in a single shot.*/
+        repeated string keys = 10;
     }
     optional QueryOptions options = 2;
 }
