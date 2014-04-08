@@ -64,7 +64,8 @@
                 </plugin>
             </plugins>
         </pluginManagement>
-    </build>    <reporting>
+    </build>
+    <reporting>
     <plugins>
         <plugin>
             <groupId>org.apache.maven.plugins</groupId>
