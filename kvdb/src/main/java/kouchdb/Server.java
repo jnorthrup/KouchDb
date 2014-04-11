@@ -8,15 +8,20 @@ import one.xio.HttpMethod;
 import one.xio.HttpStatus;
 
 import javax.xml.bind.DatatypeConverter;
+import java.io.Closeable;
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
+import java.nio.channels.AsynchronousChannelGroup;
 import java.nio.channels.AsynchronousServerSocketChannel;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
 import java.nio.charset.StandardCharsets;
 import java.util.TreeMap;
+import java.util.concurrent.Executors;
 
 import static java.lang.StrictMath.min;
 import static one.xio.HttpHeaders.*;
@@ -190,22 +195,26 @@ import static one.xio.HttpHeaders.*;
  * server's handshake as defined in this section and in Section 4.2.2,
  * the client MUST _Fail the WebSocket Connection_.
  */
-public class Server {
+public class Server implements Closeable {
     final static boolean $DBG = "true".equals(Config.get("KOUCH_DEBUG", "false"));
+    private static final Integer KOUCH_BACKLOG = Integer.valueOf(Config.get("KOUCH_BACKLOG", "1023"));
     private static URI WS_URI;
 
     static {
         try {
-            WS_URI = new URI(Config.get("KOUCH_WS_URI", "ws://localhost:5984/_connect"));
+            WS_URI = new URI(Config.get("KOUCH_WS_URI", "ws://localhost:1984/_connect"));
         } catch (URISyntaxException e) {
             e.printStackTrace();
         }
     }
 
-    public Server() {
+    private Closeable closeMe;
 
-        try (AsynchronousServerSocketChannel x = AsynchronousServerSocketChannel.open()) {
-            x.accept(null, new CompletionHandler<AsynchronousSocketChannel, Void>() {
+    public Server() { 
+        try (AsynchronousServerSocketChannel x = (AsynchronousServerSocketChannel) (closeMe = AsynchronousServerSocketChannel.open(AsynchronousChannelGroup.withCachedThreadPool(Executors.newCachedThreadPool(), Runtime.getRuntime().availableProcessors()+3)))) {
+            int port = WS_URI.getPort();
+            final String host = WS_URI.getHost();
+            x.bind(new InetSocketAddress(InetAddress.getByName(host), port), KOUCH_BACKLOG).accept(null, new CompletionHandler<AsynchronousSocketChannel, Void>() {
                 public boolean hasHeaders;
                 private Rfc822HeaderState rfc822HeaderState;
                 ByteBuffer cursor = ByteBuffer.allocateDirect(1 << 10);
@@ -228,86 +237,86 @@ public class Server {
                     }
                     socketChannel.read(cursor, attachment, new CompletionHandler<Integer, Void>() {
 
-                        @Override
-                        public void completed(Integer result, Void attachment) {
-                            if (-1 == result) try {
-                                socketChannel.close();
-                                return;
-                            } catch (IOException e) {
-                                e.printStackTrace();
-                            }
-
-                            hasHeaders = httpRequest.apply((ByteBuffer) cursor.mark().rewind());
-                            if (!cursor.hasRemaining())
-                                cursor = ByteBuffer.allocateDirect(cursor.limit() << 2).put((ByteBuffer) cursor.rewind());
-                            //     1.   The handshake MUST be a valid HTTP request as specified by
-                            //   [RFC2616].
-                            //
-                            if (!hasHeaders)
-                                socketChannel.read(cursor, null, this);
-                            else
-                                try {
-                                    this.parseRequest();
-                                } catch (URISyntaxException e) {
-                                    try {
+                                @Override
+                                public void completed(Integer result, Void attachment) {
+                                    if (-1 == result) try {
                                         socketChannel.close();
-                                    } catch (IOException e1) {
-
+                                        return;
+                                    } catch (IOException e) {
+                                        e.printStackTrace();
                                     }
-                                    e.printStackTrace();
+
+                                    hasHeaders = httpRequest.apply((ByteBuffer) cursor.mark().rewind());
+                                    if (!cursor.hasRemaining())
+                                        cursor = ByteBuffer.allocateDirect(cursor.limit() << 2).put((ByteBuffer) cursor.rewind());
+                                    //     1.   The handshake MUST be a valid HTTP request as specified by
+                                    //   [RFC2616].
+                                    //
+                                    if (!hasHeaders)
+                                        socketChannel.read(cursor, null, this);
+                                    else
+                                        try {
+                                            this.parseRequest();
+                                        } catch (URISyntaxException e) {
+                                            try {
+                                                socketChannel.close();
+                                            } catch (IOException e1) {
+
+                                            }
+                                            e.printStackTrace();
+                                        }
                                 }
-                        }
 
-                        /** <ul>
-                         assumes:
-                         <li>cursor is an unfinished ByteBuffer</li>
-                         <li> exists with all the state needed from surrounding enclosures.
-                         </ul>
+                                /** <ul>
+                                 assumes:
+                                 <li>cursor is an unfinished ByteBuffer</li>
+                                 <li> exists with all the state needed from surrounding enclosures.
+                                 </ul>
 
-                         <pre>
+                                 <pre>
 
-                         * 2.   The method of the request MUST be GET,
-                         * For example, if the WebSocket URI is "ws://example.com/chat",
-                         * the first line sent should be "GET /chat HTTP/1.1".
-                         *
-                         */
-                        void parseRequest() throws URISyntaxException {
-                            HttpMethod x = httpRequest.method();
-                            switch (x) {
-                                case GET:
-                                    String protocol = httpRequest.protocol();
+                                 * 2.   The method of the request MUST be GET,
+                                 * For example, if the WebSocket URI is "ws://example.com/chat",
+                                 * the first line sent should be "GET /chat HTTP/1.1".
+                                 *
+                                 */
+                                void parseRequest() throws URISyntaxException {
+                                    HttpMethod x = httpRequest.method();
+                                    switch (x) {
+                                        case GET:
+                                            String protocol = httpRequest.protocol();
                                             /*and the HTTP version MUST
                                                 * be at least 1.1.
                                                 **/
-                                    if (Rfc822HeaderState.HTTP_1_1.equals(protocol)) {
-                                        if (6 > httpRequest.headerStrings().size()) break; //6 MUST be present.
+                                            if (Rfc822HeaderState.HTTP_1_1.equals(protocol)) {
+                                                if (6 > httpRequest.headerStrings().size()) break; //6 MUST be present.
                                                 /* 3.   The "Request-URI" part of the request MUST match the /resource
                                                         * name/ defined in Section 3 (a relative URI) or be an absolute
                                                 * http/https URI that, when parsed, has a /resource name/, /host/,
                                                 * and /port/ that match the corresponding ws/wss URI.
                                                 */
-                                        URI uri = new URI(httpRequest.path());
-                                        if (!(uri.getHost().equals(WS_URI.getHost()) &&
-                                                uri.getPath().equals(WS_URI.getPath()))) {
-                                            break;
-                                        }
+                                                URI uri = new URI(httpRequest.path());
+                                                if (!(uri.getHost().equals(host) &&
+                                                        uri.getPath().equals(WS_URI.getPath()))) {
+                                                    break;
+                                                }
                                                 /* 4.   The request MUST contain a |Host| header field whose value
                                                         * contains /host/ plus optionally ":" followed by /port/ (when not
                                                         * using the default port).
 
                                                     */
-                                        String s = httpRequest.headerString(Host);
-                                        if (null == s || s.isEmpty()) break;
+                                                String s = httpRequest.headerString(Host);
+                                                if (null == s || s.isEmpty()) break;
                                                 /* 5.   The request MUST contain an |Upgrade| header field whose value
                                                             * MUST include the "websocket" keyword.
                                                             *
                                                     */
-                                        if (!httpRequest.headerString(Upgrade).contains("websocket")) break;
+                                                if (!httpRequest.headerString(Upgrade).contains("websocket")) break;
                                                     /* 6.   The request MUST contain a |Connection| header field whose value
                                                             * MUST include the "Upgrade" token.
                                                             *
                                                     */
-                                        if (!httpRequest.headerString(Connection).contains("Upgrade")) break;
+                                                if (!httpRequest.headerString(Connection).contains("Upgrade")) break;
                                                 /* 7.   The request MUST include a header field with the name
                                                     * |Sec-WebSocket-Key|.  The value of this header field MUST be a
                                                             * nonce consisting of a randomly selected 16-byte value that has
@@ -319,9 +328,9 @@ public class Server {
                                                             * 0x0a 0x0b 0x0c 0x0d 0x0e 0x0f 0x10, the value of the header
                                                     * field would be "AQIDBAUGBwgJCgsMDQ4PEC=="
                                                 */
-                                        String wsKeyBase64 = httpRequest.headerString(Sec$2dWebSocket$2dKey);
-                                        byte[] wsKey = DatatypeConverter.parseBase64Binary(wsKeyBase64);
-                                        if (!(wsKey.length == 16)) break;
+                                                String wsKeyBase64 = httpRequest.headerString(Sec$2dWebSocket$2dKey);
+                                                byte[] wsKey = DatatypeConverter.parseBase64Binary(wsKeyBase64);
+                                                if (!(wsKey.length == 16)) break;
                                                  /*            *
                                                     * 8.   The request MUST include a header field with the name |Origin|
                                                     * [RFC6454] if the request is coming from a browser client.  If
@@ -349,10 +358,10 @@ public class Server {
                                                             * values for Sec-WebSocket-Version.  These values were reserved in
                                                     * the IANA registry but were not and will not be used.
                                                             */
-                                        if (13 != Integer.valueOf(httpRequest.headerString(Sec$2dWebSocket$2dVersion)))
-                                            break;
-                                        Rfc822HeaderState.HttpResponse httpResponse = new Rfc822HeaderState().$res();
-                                        TreeMap<String, String> headerStrings = new TreeMap<>();
+                                                if (13 != Integer.valueOf(httpRequest.headerString(Sec$2dWebSocket$2dVersion)))
+                                                    break;
+                                                Rfc822HeaderState.HttpResponse httpResponse = new Rfc822HeaderState().$res();
+                                                TreeMap<String, String> headerStrings = new TreeMap<>();
                                                 /* 4.  If the response lacks a |Sec-WebSocket-Accept| header field or
                                                 * the |Sec-WebSocket-Accept| contains a value other than the
                                                 * base64-encoded SHA-1 of the concatenation of the |Sec-WebSocket-
@@ -369,58 +378,58 @@ public class Server {
                                                 decode the |Sec-WebSocket-Key| value.
                                                 */
 
-                                        HashCode hashCode = Hashing.sha1().hashString(wsKeyBase64 + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11", StandardCharsets.UTF_8);
-                                        headerStrings.put(Sec$2dWebSocket$2dAccept.getHeader(), BaseEncoding.base64().encode(hashCode.asBytes()));
-                                        headerStrings.put(Sec$2dWebSocket$2dProtocol.getHeader(), "kvdb");
-                                        headerStrings.put(Upgrade.getHeader(), "websocket");
-                                        headerStrings.put(Connection.getHeader(), "Upgrade");
-                                        ByteBuffer as = httpResponse.resCode(HttpStatus.$101).status(HttpStatus.$101).headerStrings(headerStrings).as(ByteBuffer.class);
-                                        socketChannel.write(as, null, new CompletionHandler<Integer, Object>() {
-                                            @Override
-                                            public void completed(Integer result, Object attachment) {
-                                                new WsFrameDecoder(socketChannel);
-
-                                            }
-
-                                            @Override
-                                            public void failed(Throwable exc, Object attachment) {
-
-                                            }
-                                        });
-                                    }
-
-
-                                    break;
-                                default:
-                                    socketChannel.write(new Rfc822HeaderState().$res().status(HttpStatus.$500).as(ByteBuffer.class), null,
-                                            new CompletionHandler<Integer, Void>() {
-                                                @Override
-                                                public void completed(Integer result, Void attachment) {
-                                                    try {
-                                                        socketChannel.close();
-                                                    } catch (IOException e) {
+                                                HashCode hashCode = Hashing.sha1().hashString(wsKeyBase64 + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11", StandardCharsets.UTF_8);
+                                                headerStrings.put(Sec$2dWebSocket$2dAccept.getHeader(), BaseEncoding.base64().encode(hashCode.asBytes()));
+                                                headerStrings.put(Sec$2dWebSocket$2dProtocol.getHeader(), "kvdb");
+                                                headerStrings.put(Upgrade.getHeader(), "websocket");
+                                                headerStrings.put(Connection.getHeader(), "Upgrade");
+                                                ByteBuffer as = httpResponse.resCode(HttpStatus.$101).status(HttpStatus.$101).headerStrings(headerStrings).as(ByteBuffer.class);
+                                                socketChannel.write(as, null, new CompletionHandler<Integer, Object>() {
+                                                    @Override
+                                                    public void completed(Integer result, Object attachment) {
+                                                        new WsFrameDecoder(socketChannel);
 
                                                     }
-                                                }
 
-                                                @Override
-                                                public void failed(Throwable exc, Void attachment) {
+                                                    @Override
+                                                    public void failed(Throwable exc, Object attachment) {
 
-                                                }
+                                                    }
+                                                });
                                             }
-                                    );
+
+
+                                            break;
+                                        default:
+                                            socketChannel.write(new Rfc822HeaderState().$res().status(HttpStatus.$500).as(ByteBuffer.class), null,
+                                                    new CompletionHandler<Integer, Void>() {
+                                                        @Override
+                                                        public void completed(Integer result, Void attachment) {
+                                                            try {
+                                                                socketChannel.close();
+                                                            } catch (IOException e) {
+
+                                                            }
+                                                        }
+
+                                                        @Override
+                                                        public void failed(Throwable exc, Void attachment) {
+
+                                                        }
+                                                    }
+                                            );
+                                    }
+
+                                }
+
+
+                                @Override
+                                public void failed(Throwable exc, Void attachment) {
+
+                                    //no longer need $DBG!
+                                    exc.printStackTrace();
+                                }
                             }
-
-                        }
-
-
-                        @Override
-                        public void failed(Throwable exc, Void attachment) {
-
-                            //no longer need $DBG!
-                            exc.printStackTrace();
-                        }
-                    }
                     );
                 }
 
@@ -451,6 +460,11 @@ public class Server {
 
         }
         return ret;
+    }
+
+    @Override
+    public void close() throws IOException {
+        closeMe.close();
     }
 }
 
