@@ -10,6 +10,7 @@ import one.xio.HttpStatus;
 import javax.xml.bind.DatatypeConverter;
 import java.io.Closeable;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -205,20 +206,21 @@ public class Server implements Closeable {
         }
     }
 
-    private static Object waitObject=new Object();
+    private static Object waitObject = new Object();
 
 
     public Server() {
         int port = WS_URI.getPort();
         final String host = WS_URI.getHost();
 
-        try (AsynchronousServerSocketChannel x = AsynchronousServerSocketChannel.open( ).bind(new InetSocketAddress(/*InetAddress.getByName(host), */port) )) {
+        try (AsynchronousServerSocketChannel x = AsynchronousServerSocketChannel.open().bind(new InetSocketAddress( InetAddress.getByName(host),  port),KOUCH_BACKLOG)) {
 
             x.accept(null, new CompletionHandler<AsynchronousSocketChannel, Object>() {
                 public boolean hasHeaders;
                 private Rfc822HeaderState rfc822HeaderState;
                 ByteBuffer cursor = ByteBuffer.allocateDirect(1 << 10);
                 public Rfc822HeaderState.HttpRequest httpRequest;
+                private CompletionHandler<Integer, Object> wsfsm;
 
                 @Override
                 public void completed(AsynchronousSocketChannel socketChannel, Object attachment) {
@@ -234,7 +236,7 @@ public class Server implements Closeable {
                                 Sec$2dWebSocket$2dProtocol,
                                 Sec$2dWebSocket$2dVersion,
                                 Upgrade
-                                );
+                        );
                     }
                     socketChannel.read(cursor, attachment, new CompletionHandler<Integer, Object>() {
 
@@ -301,7 +303,7 @@ public class Server implements Closeable {
                                                 */
                                                 String rhost = httpRequest.headerString(Host);
                                                 if (!(rhost.startsWith(host) &&
-                                                        httpRequest.path().startsWith( WS_URI.getPath()))) {
+                                                        httpRequest.path().startsWith(WS_URI.getPath()))) {
                                                     break;
                                                 }
                                                 /* 4.   The request MUST contain a |Host| header field whose value
@@ -388,20 +390,11 @@ public class Server implements Closeable {
                                                 headerStrings.put(Sec$2dWebSocket$2dProtocol.getHeader(), "kvdb");
                                                 headerStrings.put(Upgrade.getHeader(), "websocket");
                                                 headerStrings.put(Connection.getHeader(), "Upgrade");
-                                                ByteBuffer as = httpResponse.resCode(HttpStatus.$101).status(HttpStatus.$101).headerStrings(headerStrings).as(ByteBuffer.class);
-                                                socketChannel.write(as, null, new CompletionHandler<Integer, Object>() {
-                                                    @Override
-                                                    public void completed(Integer result, Object attachment) {
-                                                        new WsFrameDecoder(socketChannel);
+                                                ByteBuffer response1 = httpResponse.resCode(HttpStatus.$101).status(HttpStatus.$101).headerStrings(headerStrings).as(ByteBuffer.class);
 
-                                                    }
 
-                                                    @Override
-                                                    public void failed(Throwable exc, Object attachment) {
-                                                        exc.printStackTrace();
-
-                                                    }
-                                                });
+                                                wsfsm = new WebSocketFsm(response1, (ByteBuffer) cursor.clear(), socketChannel);
+                                                socketChannel.write(response1, null, wsfsm);
                                             }
 
 
@@ -444,14 +437,16 @@ public class Server implements Closeable {
             });
 
 
-            synchronized (waitObject){waitObject.wait();}
+            synchronized (waitObject) {
+                waitObject.wait();
+            }
         } catch (Throwable e) {
             e.printStackTrace();
         }
     }
 
     public static void main(String[] args) {
-    kouchdb.Server server = new kouchdb.Server();
+        kouchdb.Server server = new kouchdb.Server();
     }
 
     public static String wheresWaldo(int... depth) {
@@ -475,4 +470,5 @@ public class Server implements Closeable {
     public void close() throws IOException {
 
     }
+
 }

@@ -4,22 +4,19 @@ package kouchdb;
  * Created by jim on 4/6/14.
  */
 
+import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
-import java.nio.channels.AsynchronousSocketChannel;
-import java.nio.channels.CompletionHandler;
-
-import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * <pre>      0                   1                   2                   3
  * 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
  * +-+-+-+-+-------+-+-------------+-------------------------------+
- * |F|R|R|R| opcode|M| Payload len |    Extended payload length    |
+ * |F|R|R|R| opcode|M| Payload payloadLength |    Extended payload length    |
  * |I|S|S|S|  (4)  |A|     (7)     |             (16/64)           |
- * |N|V|V|V|       |S|             |   (if payload len==126/127)   |
+ * |N|V|V|V|       |S|             |   (if payload payloadLength==126/127)   |
  * | |1|2|3|       |K|             |                               |
  * +-+-+-+-+-------+-+-------------+ - - - - - - - - - - - - - - - +
- * |     Extended payload length continued, if payload len == 127  |
+ * |     Extended payload length continued, if payload payloadLength == 127  |
  * + - - - - - - - - - - - - - - - +-------------------------------+
  * |                               |Masking-key, if MASK set to 1  |
  * +-------------------------------+-------------------------------+
@@ -29,59 +26,59 @@ import static java.nio.charset.StandardCharsets.UTF_8;
  * + - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - +
  * |                     Payload Data continued ...                |
  * +---------------------------------------------------------------+
- * <p>
+ * <p/>
  * FIN:  1 bit
- * <p>
+ * <p/>
  * Indicates that this is the final fragment in a message.  The first
  * fragment MAY also be the final fragment.
- * <p>
+ * <p/>
  * RSV1, RSV2, RSV3:  1 bit each
- * <p>
+ * <p/>
  * MUST be 0 unless an extension is negotiated that defines meanings
  * for non-zero values.  If a nonzero value is received and none of
  * the negotiated extensions defines the meaning of such a nonzero
  * value, the receiving endpoint MUST _Fail the WebSocket
  * Connection_.
- * <p>
- * <p>
- * <p>
- * <p>
+ * <p/>
+ * <p/>
+ * <p/>
+ * <p/>
  * Fette & Melnikov             Standards Track                   [Page 28]
- * <p>
+ * <p/>
  * RFC 6455                 The WebSocket Protocol            December 2011
- * <p>
- * <p>
+ * <p/>
+ * <p/>
  * Opcode:  4 bits
- * <p>
+ * <p/>
  * Defines the interpretation of the "Payload data".  If an unknown
  * opcode is received, the receiving endpoint MUST _Fail the
  * WebSocket Connection_.  The following values are defined.
- * <p>
+ * <p/>
  *  %x0 denotes a continuation frame
- * <p>
+ * <p/>
  *  %x1 denotes a text frame
- * <p>
+ * <p/>
  *  %x2 denotes a binary frame
- * <p>
+ * <p/>
  *  %x3-7 are reserved for further non-control frames
- * <p>
+ * <p/>
  *  %x8 denotes a connection close
- * <p>
+ * <p/>
  *  %x9 denotes a ping
- * <p>
+ * <p/>
  *  %xA denotes a pong
- * <p>
+ * <p/>
  *  %xB-F are reserved for further control frames
- * <p>
+ * <p/>
  * Mask:  1 bit
- * <p>
+ * <p/>
  * Defines whether the "Payload data" is masked.  If set to 1, a
  * masking key is present in masking-key, and this is used to unmask
  * the "Payload data" as per Section 5.3.  All frames sent from
  * client to server have this bit set to 1.
- * <p>
+ * <p/>
  * Payload length:  7 bits, 7+16 bits, or 7+64 bits
- * <p>
+ * <p/>
  * The length of the "Payload data", in bytes: if 0-125, that is the
  * payload length.  If 126, the following 2 bytes interpreted as a
  * 16-bit unsigned integer are the payload length.  If 127, the
@@ -95,103 +92,99 @@ import static java.nio.charset.StandardCharsets.UTF_8;
  * "Application data".  The length of the "Extension data" may be
  * zero, in which case the payload length is the length of the
  * "Application data".
- * <p>
- * <p>
- * <p>
- * <p>
- * <p>
- * <p>
- * <p>
+ * <p/>
+ * <p/>
+ * <p/>
+ * <p/>
+ * <p/>
+ * <p/>
+ * <p/>
  * Fette & Melnikov             Standards Track                   [Page 29]
- * <p>
+ * <p/>
  * RFC 6455                 The WebSocket Protocol            December 2011
- * <p>
- * <p>
+ * <p/>
+ * <p/>
  * Masking-key:  0 or 4 bytes
- * <p>
+ * <p/>
  * All frames sent from the client to the server are masked by a
  * 32-bit value that is contained within the frame.  This field is
  * present if the mask bit is set to 1 and is absent if the mask bit
  * is set to 0.  See Section 5.3 for further information on client-
  * to-server masking.
- * <p>
+ * <p/>
  * Payload data:  (x+y) bytes
- * <p>
+ * <p/>
  * The "Payload data" is defined as "Extension data" concatenated
  * with "Application data".
- * <p>
+ * <p/>
  * Extension data:  x bytes
- * <p>
+ * <p/>
  * The "Extension data" is 0 bytes unless an extension has been
  * negotiated.  Any extension MUST specify the length of the
  * "Extension data", or how that length may be calculated, and how
  * the extension use MUST be negotiated during the opening handshake.
  * If present, the "Extension data" is included in the total payload
  * length.
- * <p>
+ * <p/>
  * Application data:  y bytes
- * <p>
+ * <p/>
  * Arbitrary "Application data", taking up the remainder of the frame
  * after any "Extension data".  The length of the "Application data"
  * is equal to the payload length minus the length of the "Extension
  * data".
- * <p>
+ * <p/>
  * </pre>
  */
 
 
-public class WsFrameDecoder {
-    private byte[] maskingKey;
-    private long len;
-    private boolean isMasked;
-    private OpCode opcode;
-    private boolean isFin;
-    private ByteBuffer payload;
-
-    public WsFrameDecoder(AsynchronousSocketChannel socketChannel) {
-        ByteBuffer dst = ByteBuffer.allocateDirect(8 << 10);
-        socketChannel.read(dst, null, new CompletionHandler<Integer, Void>() {
-                    @Override
-                    public void completed(Integer result, Void attachment) {
-                        if (dst.position() > 3) {
-                            dst.flip();
-                            byte b = dst.get();
-                            isFin = (b & 0b10000000) != 0;
-                            opcode = OpCode.values()[b & 0b00001111];
-                            b = dst.get();
-                            isMasked = (b & 0b10000000) != 0;
-                            int i = b & 0b01111111;
-                            switch (i) {
-                                case 126:
-                                    len = dst.getShort() & 0xffff;
-                                    break;
-                                case 127:
-                                    len = dst.getLong();
-                                    break;
-                                default:
-                                    len = i;
-                                    break;
-                            }
-                            if (isMasked) dst.get(maskingKey = new byte[4]);
-                            if (len > Integer.MAX_VALUE) throw new RuntimeException("length too large: " + len);
-                            payload = ByteBuffer.allocateDirect((int) len).put(dst);
-                            if(isMasked)applyMask(maskingKey, (ByteBuffer) payload.rewind());
-                            System.err.println("=== "+ UTF_8.decode((ByteBuffer) payload.duplicate().rewind()));
-
-                        }
-                    }
-                    @Override
-                    public void failed(Throwable exc, Void attachment) {
-
-                    }
-                }
-        );
-    }
+public class WebSocketFrame {
+    public byte[] maskingKey;
+    public long payloadLength;
+    public boolean isMasked;
+    public OpCode opcode;
+    public boolean isFin;
 
     public static void applyMask(byte[] mask, ByteBuffer data) {
         ByteBuffer overwrite = data.duplicate();
         int c = 0;
         while (data.hasRemaining()) overwrite.put((byte) ((mask[c++ % mask.length] & 0xff ^ data.get() & 0xff) & 0xff));
+    }
+
+    /**
+     * decides binary message struct
+     *
+     * @param cursor
+     */
+    public boolean apply(ByteBuffer cursor) {
+        cursor.mark() ;
+        try {
+            byte b = cursor.get();
+            isFin = (b & 0b10000000) != 0;
+            opcode = OpCode.values()[b & 0b00001111];
+            System.err.println("<<" + (isFin ? '=' : '+') + " " + opcode.name());
+            b = cursor.get();
+            isMasked = (b & 0b10000000) != 0;
+            int payload31 = b & 0b01111111;
+            switch (payload31) {
+                case 126:
+                    payloadLength = cursor.getShort() & 0xffff;
+                    break;
+                case 127:
+                    payloadLength = cursor.getLong();
+                    break;
+                default:
+                    payloadLength = payload31;
+                    break;
+            }
+            if (isMasked) cursor.get(maskingKey = new byte[4]);
+            if (payloadLength > Integer.MAX_VALUE) throw new RuntimeException("length too large: " + payloadLength);
+
+            return true;
+        } catch (BufferUnderflowException e) {
+            cursor.reset();
+        }
+        return false;
+
     }
 
     public enum OpCode {
