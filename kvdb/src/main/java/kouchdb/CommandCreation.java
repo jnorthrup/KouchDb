@@ -6,71 +6,80 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
-* Created by jim on 4/12/14.
-*/
+ * Created by jim on 4/12/14.
+ */
 public class CommandCreation implements CompletionHandler<Integer, Object> {
     private WebSocketFsm fsm;
 
     public CommandCreation(WebSocketFsm fsm) {
         this.fsm = fsm;
     }
+    List<WebSocketFrame> segmented = new ArrayList<WebSocketFrame>();
 
     @Override
-    public void completed(Integer result, Object attachment) {
-        List<WebSocketFrame> segmented = new ArrayList<WebSocketFrame>();
-        WebSocketFrame webSocketFrame = new WebSocketFrame();
-        boolean apply = webSocketFrame.apply(fsm.cursor);
+    public void completed(Integer ignored, Object attachment) {
+        while (fsm.cursor.hasRemaining()) {
+            WebSocketFrame webSocketFrame = new WebSocketFrame();//todo: keep this cheap
+            boolean apply = webSocketFrame.apply(fsm.cursor);//todo: keep this cheap
+            if (apply) {
+                if (webSocketFrame.payloadLength > fsm.cursor.remaining()) {
+                    ByteBuffer byteBuffer = ByteBuffer.allocateDirect((int) (webSocketFrame.payloadLength - fsm.cursor.remaining()));
+                    fsm.socketChannel.read(byteBuffer, attachment, new CompletionHandler<Integer, Object>() {//relinquish control
+                        @Override
+                        public void completed(Integer ignored, Object attachment) {
+                            if (!byteBuffer.hasRemaining()) {//spin till full.  then goto top
+                                ByteBuffer slice = null;
+                                if (webSocketFrame.isMasked) {
+                                    slice = (ByteBuffer) ByteBuffer.allocateDirect((int) webSocketFrame.payloadLength).put(fsm.cursor);
+                                    WebSocketFrame.applyMask(webSocketFrame.maskingKey, slice);
+                                    WebSocketFrame.applyMask(webSocketFrame.maskingKey, byteBuffer);
+                                }
 
-        if (apply) {
-            if (webSocketFrame.payloadLength > fsm.cursor.remaining()) {
-                ByteBuffer byteBuffer = ByteBuffer.allocateDirect((int) (webSocketFrame.payloadLength - fsm.cursor.remaining()));
-                fsm.socketChannel.read(byteBuffer, attachment, new CompletionHandler<Integer, Object>() {
-                    @Override
-                    public void completed(Integer result, Object attachment) {
-                        if (!byteBuffer.hasRemaining()) {//spin till full.  then goto top
-                            ByteBuffer slice = null;
-                            if (webSocketFrame.isMasked) {
-                                slice = fsm.cursor.slice();
-                                WebSocketFrame.applyMask(webSocketFrame.maskingKey, slice);
-                                WebSocketFrame.applyMask(webSocketFrame.maskingKey, byteBuffer);
+                                command(webSocketFrame, slice, byteBuffer);
+                                completed(ignored, attachment);
+                                CommandCreation.this.completed(ignored, attachment);//resume control of draining the cursor to the outer outer class loop
                             }
-                            command(webSocketFrame, slice, byteBuffer);
                         }
-                    }
 
-                    @Override
-                    public void failed(Throwable exc, Object attachment) {
-
-                    }
-                });
-            }else
+                        @Override
+                        public void failed(Throwable exc, Object attachment) {
+                        }
+                    });
+                    return;//relinquish control
+                } else
                 //(webSocketFrame.payloadLength<=cursor.remaining())
                 {
 
-                      command(webSocketFrame,(ByteBuffer) ByteBuffer.allocateDirect((int) webSocketFrame.payloadLength).put(fsm.cursor).rewind());
-                      fsm.cursor.compact();
-                }
-        }
 
+                    command(webSocketFrame, (ByteBuffer) ByteBuffer.allocateDirect((int) webSocketFrame.payloadLength).put(fsm.cursor).rewind());
+                }
+            } else
+                bail();//deficient cursor.  handle elswhere.
+            return;
+        }
+    }
+
+    private void bail() {
+        fsm.socketChannel.read(fsm.cursor, null, fsm.startNewFrameHandler);
     }
 
     @Override
     public void failed(Throwable exc, Object attachment) {
 
     }
+
     /**
      * receive a series of command fragments and assemble.  each fragment may have more than one buffer.
+     *
      * @param webSocketFrame
      * @param byteBuffer
      */
     void command(WebSocketFrame webSocketFrame, ByteBuffer... byteBuffer) {
-
+        fsm.cursor.compact();
         System.err.println("");
         //do something.... crack a payload... then
-        //
-        // then...
 
-        fsm.socketChannel.read(fsm.cursor,null,fsm.startNewFrameHandler);
+        // then...
 
 
     }
