@@ -8,6 +8,8 @@ import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 /**
  * <pre>      0                   1                   2                   3
  * 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -173,6 +175,9 @@ public class WsFrameDecoder {
                             if (isMasked) dst.get(maskingKey = new byte[4]);
                             if (len > Integer.MAX_VALUE) throw new RuntimeException("length too large: " + len);
                             payload = ByteBuffer.allocateDirect((int) len).put(dst);
+                            if(isMasked)applyMask(maskingKey, (ByteBuffer) payload.rewind());
+                            System.err.println("=== "+ UTF_8.decode((ByteBuffer) payload.duplicate().rewind()));
+
                         }
                     }
                     @Override

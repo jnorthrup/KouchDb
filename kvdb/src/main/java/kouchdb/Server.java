@@ -10,18 +10,15 @@ import one.xio.HttpStatus;
 import javax.xml.bind.DatatypeConverter;
 import java.io.Closeable;
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
-import java.nio.channels.AsynchronousChannelGroup;
 import java.nio.channels.AsynchronousServerSocketChannel;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
 import java.nio.charset.StandardCharsets;
 import java.util.TreeMap;
-import java.util.concurrent.Executors;
 
 import static java.lang.StrictMath.min;
 import static one.xio.HttpHeaders.*;
@@ -197,7 +194,7 @@ import static one.xio.HttpHeaders.*;
  */
 public class Server implements Closeable {
     final static boolean $DBG = "true".equals(Config.get("KOUCH_DEBUG", "false"));
-    private static final Integer KOUCH_BACKLOG = Integer.valueOf(Config.get("KOUCH_BACKLOG", "1023"));
+    private static final Integer KOUCH_BACKLOG = Integer.valueOf(Config.get("KOUCH_BACKLOG", "16"));
     private static URI WS_URI;
 
     static {
@@ -208,41 +205,46 @@ public class Server implements Closeable {
         }
     }
 
-    private Closeable closeMe;
+    private static Object waitObject=new Object();
 
-    public Server() { 
-        try (AsynchronousServerSocketChannel x = (AsynchronousServerSocketChannel) (closeMe = AsynchronousServerSocketChannel.open(AsynchronousChannelGroup.withCachedThreadPool(Executors.newCachedThreadPool(), Runtime.getRuntime().availableProcessors()+3)))) {
-            int port = WS_URI.getPort();
-            final String host = WS_URI.getHost();
-            x.bind(new InetSocketAddress(InetAddress.getByName(host), port), KOUCH_BACKLOG).accept(null, new CompletionHandler<AsynchronousSocketChannel, Void>() {
+
+    public Server() {
+        int port = WS_URI.getPort();
+        final String host = WS_URI.getHost();
+
+        try (AsynchronousServerSocketChannel x = AsynchronousServerSocketChannel.open( ).bind(new InetSocketAddress(/*InetAddress.getByName(host), */port) )) {
+
+            x.accept(null, new CompletionHandler<AsynchronousSocketChannel, Object>() {
                 public boolean hasHeaders;
                 private Rfc822HeaderState rfc822HeaderState;
                 ByteBuffer cursor = ByteBuffer.allocateDirect(1 << 10);
                 public Rfc822HeaderState.HttpRequest httpRequest;
 
                 @Override
-                public void completed(AsynchronousSocketChannel socketChannel, Void attachment) {
+                public void completed(AsynchronousSocketChannel socketChannel, Object attachment) {
                     {
+                        System.err.println("accept");
                         rfc822HeaderState = new Rfc822HeaderState();
                         httpRequest = rfc822HeaderState.$req();
                         httpRequest.headerInterest(
-                                Host,
                                 Connection,
-                                Upgrade,
-                                Sec$2dWebSocket$2dKey,
+                                Host,
                                 Origin,
+                                Sec$2dWebSocket$2dKey,
                                 Sec$2dWebSocket$2dProtocol,
-                                Sec$2dWebSocket$2dVersion
-                        );
+                                Sec$2dWebSocket$2dVersion,
+                                Upgrade
+                                );
                     }
-                    socketChannel.read(cursor, attachment, new CompletionHandler<Integer, Void>() {
+                    socketChannel.read(cursor, attachment, new CompletionHandler<Integer, Object>() {
 
                                 @Override
-                                public void completed(Integer result, Void attachment) {
+                                public void completed(Integer result, Object attachment) {
+                                    System.err.println("read1");
                                     if (-1 == result) try {
                                         socketChannel.close();
                                         return;
-                                    } catch (IOException e) {
+                                    } catch (Throwable e) {
                                         e.printStackTrace();
                                     }
 
@@ -260,7 +262,8 @@ public class Server implements Closeable {
                                         } catch (URISyntaxException e) {
                                             try {
                                                 socketChannel.close();
-                                            } catch (IOException e1) {
+                                            } catch (Throwable e1) {
+                                                e1.printStackTrace();
 
                                             }
                                             e.printStackTrace();
@@ -289,15 +292,16 @@ public class Server implements Closeable {
                                                 * be at least 1.1.
                                                 **/
                                             if (Rfc822HeaderState.HTTP_1_1.equals(protocol)) {
-                                                if (6 > httpRequest.headerStrings().size()) break; //6 MUST be present.
+                                                if (6 > httpRequest.headerStrings().size())
+                                                    break; //6 MUST be present.
                                                 /* 3.   The "Request-URI" part of the request MUST match the /resource
                                                         * name/ defined in Section 3 (a relative URI) or be an absolute
                                                 * http/https URI that, when parsed, has a /resource name/, /host/,
                                                 * and /port/ that match the corresponding ws/wss URI.
                                                 */
-                                                URI uri = new URI(httpRequest.path());
-                                                if (!(uri.getHost().equals(host) &&
-                                                        uri.getPath().equals(WS_URI.getPath()))) {
+                                                String rhost = httpRequest.headerString(Host);
+                                                if (!(rhost.startsWith(host) &&
+                                                        httpRequest.path().startsWith( WS_URI.getPath()))) {
                                                     break;
                                                 }
                                                 /* 4.   The request MUST contain a |Host| header field whose value
@@ -305,18 +309,19 @@ public class Server implements Closeable {
                                                         * using the default port).
 
                                                     */
-                                                String s = httpRequest.headerString(Host);
-                                                if (null == s || s.isEmpty()) break;
+                                                if (null == rhost || rhost.isEmpty()) break;
                                                 /* 5.   The request MUST contain an |Upgrade| header field whose value
                                                             * MUST include the "websocket" keyword.
                                                             *
                                                     */
-                                                if (!httpRequest.headerString(Upgrade).contains("websocket")) break;
+                                                if (!httpRequest.headerString(Upgrade).contains("websocket"))
+                                                    break;
                                                     /* 6.   The request MUST contain a |Connection| header field whose value
                                                             * MUST include the "Upgrade" token.
                                                             *
                                                     */
-                                                if (!httpRequest.headerString(Connection).contains("Upgrade")) break;
+                                                if (!httpRequest.headerString(Connection).contains("Upgrade"))
+                                                    break;
                                                 /* 7.   The request MUST include a header field with the name
                                                     * |Sec-WebSocket-Key|.  The value of this header field MUST be a
                                                             * nonce consisting of a randomly selected 16-byte value that has
@@ -393,6 +398,7 @@ public class Server implements Closeable {
 
                                                     @Override
                                                     public void failed(Throwable exc, Object attachment) {
+                                                        exc.printStackTrace();
 
                                                     }
                                                 });
@@ -402,9 +408,9 @@ public class Server implements Closeable {
                                             break;
                                         default:
                                             socketChannel.write(new Rfc822HeaderState().$res().status(HttpStatus.$500).as(ByteBuffer.class), null,
-                                                    new CompletionHandler<Integer, Void>() {
+                                                    new CompletionHandler<Integer, Object>() {
                                                         @Override
-                                                        public void completed(Integer result, Void attachment) {
+                                                        public void completed(Integer result, Object attachment) {
                                                             try {
                                                                 socketChannel.close();
                                                             } catch (IOException e) {
@@ -413,19 +419,16 @@ public class Server implements Closeable {
                                                         }
 
                                                         @Override
-                                                        public void failed(Throwable exc, Void attachment) {
-
+                                                        public void failed(Throwable exc, Object attachment) {
+                                                            exc.printStackTrace();
                                                         }
                                                     }
                                             );
                                     }
-
                                 }
 
-
                                 @Override
-                                public void failed(Throwable exc, Void attachment) {
-
+                                public void failed(Throwable exc, Object attachment) {
                                     //no longer need $DBG!
                                     exc.printStackTrace();
                                 }
@@ -434,15 +437,21 @@ public class Server implements Closeable {
                 }
 
                 @Override
-                public void failed(Throwable exc, Void attachment) {
+                public void failed(Throwable exc, Object attachment) {
                     //no longer need $DBG!
                     exc.printStackTrace();
-
                 }
             });
-        } catch (IOException e) {
+
+
+            synchronized (waitObject){waitObject.wait();}
+        } catch (Throwable e) {
             e.printStackTrace();
         }
+    }
+
+    public static void main(String[] args) {
+    kouchdb.Server server = new kouchdb.Server();
     }
 
     public static String wheresWaldo(int... depth) {
@@ -464,9 +473,6 @@ public class Server implements Closeable {
 
     @Override
     public void close() throws IOException {
-        closeMe.close();
-    }
-}
 
-class Rfc6454 {
+    }
 }
