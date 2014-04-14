@@ -838,25 +838,23 @@ message WsFrame {
         Compaction = 15;
         RevisionDiff = 16;
         Events = 17;
-
     }
     required Type type = 2; 
-    optional CreateDb mCreateDb = 100100;
-    optional DeleteDb mDeleteDb = 100200;
-    optional PersistDoc mPersistDoc = 100300;
-    optional Fetchdoc mFetchdoc = 100400;
-    optional DeleteDoc mDeleteDoc = 100500;
-    optional PersistBatch mPersistBatch = 100600;
-    optional FetchBatch mFetchBatch = 100700;
-    optional Changes mChanges = 100800;
-    optional Replication mReplication = 100900;
-    optional PersistAttachments mPersistAttachments = 101000;
-    optional FetchAttachment mFetchAttachment = 101100;
-    optional DeleteAttachment mDeleteAttachment = 101200;
-    optional QueryDb mQueryDb = 101300;
-    optional DbInfo mDbInfo = 101400;
-    optional Compaction mCompaction = 101500;
-    optional RevisionDiff mRevisionDiff = 101600;
-    optional Events mEvents = 101700;
-
+    optional CreateDb _CreateDb = 100100;
+    optional DeleteDb _DeleteDb = 100200;
+    optional PersistDoc _PersistDoc = 100300;
+    optional Fetchdoc _Fetchdoc = 100400;
+    optional DeleteDoc _DeleteDoc = 100500;
+    optional PersistBatch _PersistBatch = 100600;
+    optional FetchBatch _FetchBatch = 100700;
+    optional Changes _Changes = 100800;
+    optional Replication _Replication = 100900;
+    optional PersistAttachments _PersistAttachments = 101000;
+    optional FetchAttachment _FetchAttachment = 101100;
+    optional DeleteAttachment _DeleteAttachment = 101200;
+    optional QueryDb _QueryDb = 101300;
+    optional DbInfo _DbInfo = 101400;
+    optional Compaction _Compaction = 101500;
+    optional RevisionDiff _RevisionDiff = 101600;
+    optional Events _Events = 101700;
 }

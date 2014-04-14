@@ -9,7 +9,7 @@ public enum Command{
     Fetchdoc,
     DeleteDoc,
     BatchCreate,
-    BatchFetch,
+    FetchBatch,
     Changes,
     Replication,
     Sync,

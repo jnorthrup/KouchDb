@@ -196,7 +196,7 @@ import static one.xio.HttpHeaders.*;
 public class Server implements Closeable {
     final static boolean $DBG = "true".equals(Config.get("KOUCH_DEBUG", "false"));
     private static final Integer KOUCH_BACKLOG = Integer.valueOf(Config.get("KOUCH_BACKLOG", "16"));
-    private static URI WS_URI;
+      static URI WS_URI;
 
     static {
         try {
