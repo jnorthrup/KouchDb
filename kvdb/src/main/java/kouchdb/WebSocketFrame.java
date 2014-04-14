@@ -159,12 +159,13 @@ public class WebSocketFrame {
         cursor.mark() ;
         try {
             byte b = cursor.get();
-            isFin = (b & 0b10000000) != 0;
-            opcode = OpCode.values()[b & 0b00001111];
+            isFin = (b & 0b1000_0000) != 0;
+            int i = b & 0b1111;
+            opcode = OpCode.values()[i];
             System.err.println("<<" + (isFin ? '=' : '+') + " " + opcode.name());
             b = cursor.get();
-            isMasked = (b & 0b10000000) != 0;
-            int payload31 = b & 0b01111111;
+            isMasked = (b & 0b1000_0000) != 0;
+            int payload31 = b & 0b0111_1111;
             switch (payload31) {
                 case 126:
                     payloadLength = cursor.getShort() & 0xffff;

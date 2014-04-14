@@ -7,7 +7,7 @@ function init() {
     testWebSocket();
 }
 function testWebSocket() {
-    websocket = new WebSocket(wsUri);
+    websocket = new WebSocket(wsUri,"kvdb");
     websocket.onopen = function (evt) {
         onOpen(evt)
     };

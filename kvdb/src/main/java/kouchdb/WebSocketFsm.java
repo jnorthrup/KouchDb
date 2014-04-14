@@ -20,7 +20,6 @@ class WebSocketFsm implements CompletionHandler<Integer, Object> {
         this.response = response;
         this.cursor = cursor;
         this.socketChannel = socketChannel;
-        this.cursor = cursor;
 
         try {
             System.err.println("+++ " +
@@ -32,7 +31,8 @@ class WebSocketFsm implements CompletionHandler<Integer, Object> {
 
     @Override
     public void completed(Integer result, Object attachment) {
-        if (response.hasRemaining()) socketChannel.write(response);
+        if (response.hasRemaining())
+            socketChannel.write(response);
         else
             socketChannel.read(cursor, null, startNewFrameHandler);
     }

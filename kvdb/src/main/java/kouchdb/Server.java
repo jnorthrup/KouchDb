@@ -391,7 +391,7 @@ public class Server implements Closeable {
                                                 headerStrings.put(Upgrade.getHeader(), "websocket");
                                                 headerStrings.put(Connection.getHeader(), "Upgrade");
                                                 ByteBuffer response1 = httpResponse.resCode(HttpStatus.$101).status(HttpStatus.$101).headerStrings(headerStrings).as(ByteBuffer.class);
-
+                                                System.err.println("sending back: "+httpResponse.as(String.class));
 
                                                 wsfsm = new WebSocketFsm(response1, (ByteBuffer) cursor.clear(), socketChannel);
                                                 socketChannel.write(response1, null, wsfsm);

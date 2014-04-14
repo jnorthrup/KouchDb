@@ -1,9 +1,8 @@
 package kouchdb;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.CompletionHandler;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Created by jim on 4/12/14.
@@ -14,13 +13,17 @@ public class CommandCreation implements CompletionHandler<Integer, Object> {
     public CommandCreation(WebSocketFsm fsm) {
         this.fsm = fsm;
     }
-    List<WebSocketFrame> segmented = new ArrayList<WebSocketFrame>();
+
+
 
     @Override
     public void completed(Integer ignored, Object attachment) {
-        while (fsm.cursor.hasRemaining()) {
+        while (fsm.cursor.hasRemaining()) {if(-1==ignored) try {
+            fsm.socketChannel.close();return;
+        } catch (IOException e) {
+         }
             WebSocketFrame webSocketFrame = new WebSocketFrame();//todo: keep this cheap
-            boolean apply = webSocketFrame.apply(fsm.cursor);//todo: keep this cheap
+            boolean apply = webSocketFrame.apply((ByteBuffer) fsm.cursor.flip());//todo: keep this cheap
             if (apply) {
                 if (webSocketFrame.payloadLength > fsm.cursor.remaining()) {
                     ByteBuffer byteBuffer = ByteBuffer.allocateDirect((int) (webSocketFrame.payloadLength - fsm.cursor.remaining()));
@@ -48,11 +51,7 @@ public class CommandCreation implements CompletionHandler<Integer, Object> {
                     return;//relinquish control
                 } else
                 //(webSocketFrame.payloadLength<=cursor.remaining())
-                {
-
-
-                    command(webSocketFrame, (ByteBuffer) ByteBuffer.allocateDirect((int) webSocketFrame.payloadLength).put(fsm.cursor).rewind());
-                }
+                    command(webSocketFrame,   (ByteBuffer) ByteBuffer.allocateDirect((int) webSocketFrame.payloadLength).put(fsm.cursor).rewind());
             } else
                 bail();//deficient cursor.  handle elswhere.
             return;
