@@ -273,7 +273,7 @@ message DeleteDoc {
  * }
  * ]
  */
-message BatchCreate {
+message PersistBatch {
     required string db = 1;
     repeated string docs = 2;
 }
@@ -305,7 +305,7 @@ message BatchCreate {
  * }]
  * }
  */
-message BatchFetch {
+message FetchBatch {
     required string db = 1;
     /**Options
      * All options default to false unless otherwise specified.
@@ -554,7 +554,7 @@ message Attachment {
  * }
  * See Inline Attachments on the CouchDB wiki for details.
  */
-message SaveAttachments {
+message PersistAttachments {
     required string db = 1;
     required string docId = 2;
     required string rev = 3;
@@ -575,7 +575,7 @@ message SaveAttachments {
  * Inline attachments
  * You can specify attachments: true to most read operations. The attachment data will then be included inlined in the resulting list of docs.
  */
-message GetAttachment {
+message FetchAttachment {
     required string db = 1;
     required string docId = 2;
     required string attachmentId = 3;
@@ -816,5 +816,47 @@ message Events {
     }
     required cd event = 1;
     required int64 channel = 2;
+
+}
+
+message WsFrame {
+    enum Type {
+        CreateDb = 1;
+        DeleteDb = 2;
+        PersistDoc = 3;
+        Fetchdoc = 4;
+        DeleteDoc = 5;
+        PersistBatch = 6;
+        FetchBatch = 7;
+        Changes = 8;
+        Replication = 9;
+        PersistAttachments = 10;
+        FetchAttachment = 11;
+        DeleteAttachment = 12;
+        QueryDb = 13;
+        DbInfo = 14;
+        Compaction = 15;
+        RevisionDiff = 16;
+        Events = 17;
+
+    }
+    required Type type = 2; 
+    optional CreateDb mCreateDb = 100100;
+    optional DeleteDb mDeleteDb = 100200;
+    optional PersistDoc mPersistDoc = 100300;
+    optional Fetchdoc mFetchdoc = 100400;
+    optional DeleteDoc mDeleteDoc = 100500;
+    optional PersistBatch mPersistBatch = 100600;
+    optional FetchBatch mFetchBatch = 100700;
+    optional Changes mChanges = 100800;
+    optional Replication mReplication = 100900;
+    optional PersistAttachments mPersistAttachments = 101000;
+    optional FetchAttachment mFetchAttachment = 101100;
+    optional DeleteAttachment mDeleteAttachment = 101200;
+    optional QueryDb mQueryDb = 101300;
+    optional DbInfo mDbInfo = 101400;
+    optional Compaction mCompaction = 101500;
+    optional RevisionDiff mRevisionDiff = 101600;
+    optional Events mEvents = 101700;
 
 }
