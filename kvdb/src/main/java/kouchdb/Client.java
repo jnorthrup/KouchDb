@@ -1,32 +1,66 @@
 package kouchdb;
 
-import kouchdb.command.DbInfo;
-import kouchdb.command.WsFrame;
+import com.dyuproject.protostuff.parser.Message;
+import com.dyuproject.protostuff.parser.Proto;
+import com.dyuproject.protostuff.parser.ProtoUtil;
+import com.google.common.base.Joiner;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.net.URI;
-import java.net.URL;
-import java.nio.channels.Channels;
-import java.nio.channels.ReadableByteChannel;
-import java.util.concurrent.Executors;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.regex.Pattern;
 
 /**
  * Created by jim on 4/14/14.
  */
 public class Client {
+
+    public static final Pattern COMPILE = Pattern.compile("[/]{2}.*$");
+
     public static void main(String[] args) throws IOException {
+        Path path = Paths.get("/home/jim/work/KouchDb/kvdb/src/main/proto/Commands.proto");
 
-        Executors.newSingleThreadExecutor().submit(() -> {
-            Server.main(args);
-        });
-        URI ws_uri = Server.WS_URI;
-        String s = ws_uri.toASCIIString().replaceFirst("ws://", "http://");
-        try (InputStream inputStream = new URL(s).openStream(); ReadableByteChannel readableByteChannel = Channels.newChannel(inputStream)) {
+        try {
+            Proto target = new Proto();
+            ProtoUtil.loadFrom(Files.newBufferedReader(path), target);
 
-            WsFrame test = new WsFrame().setType(WsFrame.Type.DbInfo).setDbInfo(new DbInfo().setDb("test"));
-         }
+            Collection<Message> messages = target.getMessages();
+
+            messages.forEach(o -> System.err.println( o.getFullName()));
+            for (Message message : messages) {
+                descend(message);
+            }
+         } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+    private static void descend(Message message) {
+        LinkedHashMap<String, Message> nestedMessageMap = message.getNestedMessageMap();
+        for (Map.Entry<String, Message> stringMessageEntry : nestedMessageMap.entrySet()) {
+             descend(stringMessageEntry.getValue());
+        }
+
+        writeGen(message);
+
+
+        String name = message.getName();
+        System.err.println(""+ name);
 
     }
 
+    private static void writeGen(Message message) {
+        System.out.println("public enum " +message.getName()+ " {");
+        ArrayList<String> objects = new ArrayList<>();
+        message.getFields().forEach(o -> objects.add(o.getName()+"(" +o.getJavaType()+
+                ")"));
+        System.out.println(Joiner.on(',').join(objects));
+        System.out.println("}");
+    }
+
 }
+

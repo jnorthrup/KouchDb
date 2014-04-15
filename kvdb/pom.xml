@@ -62,7 +62,12 @@
             <groupId>com.dyuproject.protostuff</groupId>
             <artifactId>protostuff-json</artifactId>
             <version>${protostuff.version}</version>
+        </dependency>        <dependency>
+            <groupId>com.dyuproject.protostuff</groupId>
+            <artifactId>protostuff-parser</artifactId>
+            <version>${protostuff.version}</version>
         </dependency>
+
     </dependencies>
 
     <build>
