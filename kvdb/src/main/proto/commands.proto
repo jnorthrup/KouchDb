@@ -3,29 +3,8 @@ package kouchdb.command;
 
 option java_package = "kouchdb.command";
 
-option java_outer_classname = "WebsocketCommands";
+option java_outer_classname = "SchemaCommands";
 
-
-message WsFrame {
-    enum Type {
-        CreateDb = 1;
-        DeleteDb = 2;
-        PersistDoc = 3;
-        Fetchdoc = 4;
-        DeleteDoc = 5;
-        PersistBatch = 6;
-        FetchBatch = 7;
-        Changes = 8;
-        Replication = 9;
-        PersistAttachments = 10;
-        FetchAttachment = 11;
-        DeleteAttachment = 12;
-        QueryDb = 13;
-        DbInfo = 14;
-        Compaction = 15;
-        RevisionDiff = 16;
-        Events = 17;
-    }
 
     /**
      * Create a database
@@ -838,22 +817,43 @@ message WsFrame {
 
     }
 
-    required Type type = 2;
-    optional CreateDb _CreateDb = 100100;
-    optional DeleteDb _DeleteDb = 100200;
-    optional PersistDoc _PersistDoc = 100300;
-    optional Fetchdoc _Fetchdoc = 100400;
-    optional DeleteDoc _DeleteDoc = 100500;
-    optional PersistBatch _PersistBatch = 100600;
-    optional FetchBatch _FetchBatch = 100700;
-    optional Changes _Changes = 100800;
-    optional Replication _Replication = 100900;
-    optional PersistAttachments _PersistAttachments = 101000;
-    optional FetchAttachment _FetchAttachment = 101100;
-    optional DeleteAttachment _DeleteAttachment = 101200;
-    optional QueryDb _QueryDb = 101300;
-    optional DbInfo _DbInfo = 101400;
-    optional Compaction _Compaction = 101500;
-    optional RevisionDiff _RevisionDiff = 101600;
-    optional Events _Events = 101700;
+message WsFrame {
+    /* enum Type {
+         CreateDb = 1;
+         DeleteDb = 2;
+         PersistDoc = 3;
+         Fetchdoc = 4;
+         DeleteDoc = 5;
+         PersistBatch = 6;
+         FetchBatch = 7;
+         Changes = 8;
+         Replication = 9;
+         PersistAttachments = 10;
+         FetchAttachment = 11;
+         DeleteAttachment = 12;
+         QueryDb = 13;
+         DbInfo = 14;
+         Compaction = 15;
+         RevisionDiff = 16;
+         Events = 17;
+     }*/
+
+//    required Type type = 2;
+    optional CreateDb CreateDb = 100100;
+    optional DeleteDb DeleteDb = 100200;
+    optional PersistDoc PersistDoc = 100300;
+    optional Fetchdoc Fetchdoc = 100400;
+    optional DeleteDoc DeleteDoc = 100500;
+    optional PersistBatch PersistBatch = 100600;
+    optional FetchBatch FetchBatch = 100700;
+    optional Changes Changes = 100800;
+    optional Replication Replication = 100900;
+    optional PersistAttachments PersistAttachments = 101000;
+    optional FetchAttachment FetchAttachment = 101100;
+    optional DeleteAttachment DeleteAttachment = 101200;
+    optional QueryDb QueryDb = 101300;
+    optional DbInfo DbInfo = 101400;
+    optional Compaction Compaction = 101500;
+    optional RevisionDiff RevisionDiff = 101600;
+    optional Events Events = 101700;
 }
