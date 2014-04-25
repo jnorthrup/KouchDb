@@ -206,7 +206,7 @@ public class Server implements Closeable {
         }
     }
 
-    private static Object waitObject = new Object();
+    public  static Object waitObject = new Object();
 
 
     public Server() {

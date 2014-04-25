@@ -13,9 +13,6 @@ public class CommandCreation implements CompletionHandler<Integer, Object> {
     public CommandCreation(WebSocketFsm fsm) {
         this.fsm = fsm;
     }
-
-
-
     @Override
     public void completed(Integer ignored, Object attachment) {
         while (fsm.cursor.hasRemaining()) {if(-1==ignored) try {

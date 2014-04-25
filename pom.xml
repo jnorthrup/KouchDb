@@ -18,6 +18,8 @@
     </properties>
 
     <modules>
+        <module>prautobean-lib</module>
+        <module>prautobean-plugin</module>
         <module>cxxdb</module>
         <module>nio2</module>
         <module>kvdb</module>

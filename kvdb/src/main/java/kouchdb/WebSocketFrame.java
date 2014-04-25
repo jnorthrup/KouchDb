@@ -112,12 +112,12 @@ import java.nio.ByteBuffer;
  * is set to 0.  See Section 5.3 for further information on client-
  * to-server masking.
  * <p/>
- * Payload data:  (x+y) bytes
+ * Payload data:  (StripeLeveler+y) bytes
  * <p/>
  * The "Payload data" is defined as "Extension data" concatenated
  * with "Application data".
  * <p/>
- * Extension data:  x bytes
+ * Extension data:  StripeLeveler bytes
  * <p/>
  * The "Extension data" is 0 bytes unless an extension has been
  * negotiated.  Any extension MUST specify the length of the
