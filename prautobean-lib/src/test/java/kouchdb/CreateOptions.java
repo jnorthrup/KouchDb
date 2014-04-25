@@ -6,7 +6,7 @@ import kouchdb.ann.ProtoOrigin;
 
 import java.util.List;
 
-@ProtoOrigin(value = "kouchdb.command.CreateDb.CreateOptions")
+@ProtoOrigin(  "kouchdb.command.CreateDb.CreateOptions")
 public interface CreateOptions {
 
     @Optional(value = 1)
@@ -34,11 +34,8 @@ public interface CreateOptions {
 
     List<CreateOptions> getChallenge();
 
-
-
     @Optional(6)
     @ProtoNumber(6)
     List<String> getChallenge2();
-
 
 }

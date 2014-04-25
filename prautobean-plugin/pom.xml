@@ -7,6 +7,7 @@
         <groupId>kouchdb</groupId>
         <version>0.0.0.1</version>
     </parent>
+    <packaging>maven-plugin</packaging>
     <modelVersion>4.0.0</modelVersion>
     <artifactId>prautobean-plugin</artifactId>
     <dependencies>
@@ -14,6 +15,16 @@
             <groupId>org.apache.maven.plugin-tools</groupId>
             <artifactId>maven-plugin-annotations</artifactId>
             <version>3.2</version>
+        </dependency>
+        <dependency>
+        <groupId>org.apache.maven</groupId>
+        <artifactId>maven-plugin-api</artifactId>
+        <version>3.0</version>
+    </dependency>
+        <dependency>
+            <groupId>${parent.groupId}</groupId>
+            <artifactId>prautobean-lib</artifactId>
+            <version>${project.parent.version}</version>
         </dependency>
     </dependencies>
 

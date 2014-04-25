@@ -62,16 +62,16 @@
                     <target>1.8</target>
                 </configuration>
             </plugin>
-            <plugin>
+          <!--  <plugin>
                 <groupId>com.dyuproject.protostuff</groupId>
                 <artifactId>protostuff-maven-plugin</artifactId>
                 <version>${protostuff.version}</version>
                 <configuration>
-                    <!--<cacheProtos>true</cacheProtos>-->
-                    <!--<sourceBaseDir>src/main/proto</sourceBaseDir>-->
+                    &lt;!&ndash;<cacheProtos>true</cacheProtos>&ndash;&gt;
+                    &lt;!&ndash;<sourceBaseDir>src/main/proto</sourceBaseDir>&ndash;&gt;
 
                     <protoModules>
-                        <!--                <protoModule>
+                        &lt;!&ndash;                <protoModule>
                                             <source>src/main/proto/commands.proto</source>
                                             <outputDir>${project.build.directory}/generated-sources</outputDir>
                                             <output>java_bean</output>
@@ -95,7 +95,7 @@
                                                     <name>generate_field_map</name>
                                                 </property>
                                             </options>&ndash;&gt;
-                                        </protoModule>--><!--
+                                        </protoModule>&ndash;&gt;&lt;!&ndash;
                         <protoModule>
                             <source>src/main/proto/commands.proto</source>
                             <outputDir>${project.build.directory}/jso/generated-sources</outputDir>
@@ -110,7 +110,7 @@
                                 </property>
                             </options>
 
-                        </protoModule>--><!--
+                        </protoModule>&ndash;&gt;&lt;!&ndash;
                         <protoModule>
                             <source>src/main/proto/commands.proto</source>
                             <outputDir>${project.build.directory}/generated-sources</outputDir>
@@ -118,7 +118,7 @@
                             <encoding>UTF-8</encoding>
 
 
-                        </protoModule>-->
+                        </protoModule>&ndash;&gt;
                     </protoModules>
                 </configuration>
                 <executions>
@@ -130,7 +130,9 @@
                         </goals>
                     </execution>
                 </executions>
-            </plugin>
+            </plugin>-->
+
+
         </plugins>
     </build>
 
