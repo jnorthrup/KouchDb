@@ -9,23 +9,18 @@ import java.util.function.Function;
 
 /**
 * Created by jim on 4/24/14.
-*/
-class ReadOnlyBBList implements List {
-    private final Class type;
+*/public class ReadOnlyBBList implements List {
     private final int size;
-    private final ByteBuffer b;
+    private final ByteBuffer byteBuffer;
     Function<ByteBuffer, Object> byteBufferObjectFunction;
     Integer per;
 
-    private Integer vsize;
 
     public ReadOnlyBBList(Class type, int size, ByteBuffer b) {
-        this.type = type;
         this.size = size;
-        this.b = b;
+        this.byteBuffer = b;
         byteBufferObjectFunction = PackedPayload.VIEWGETTER.get(type);
-        per = PackedPayload.VIEWSIZES.get(type);
-        vsize = PackedPayload.VIEWSIZES.get(type);
+        per   = PackedPayload.VIEWSIZES.get(type);
     }
 
     @Override
@@ -40,9 +35,9 @@ class ReadOnlyBBList implements List {
 
     @Override
     public boolean contains(Object o) {
-        b.rewind();
-        while (b.hasRemaining()) {
-            Object apply = byteBufferObjectFunction.apply(b);
+        byteBuffer.rewind();
+        while (byteBuffer.hasRemaining()) {
+            Object apply = byteBufferObjectFunction.apply(byteBuffer);
             if (apply.equals(o)) return true;
         }
 
@@ -51,7 +46,7 @@ class ReadOnlyBBList implements List {
 
     @Override
     public Iterator iterator() {
-        ByteBuffer ib = (ByteBuffer) b.duplicate().rewind();
+        ByteBuffer ib = (ByteBuffer) byteBuffer.duplicate().rewind();
         return new Iterator() {
             @Override
             public boolean hasNext() {
@@ -69,7 +64,7 @@ class ReadOnlyBBList implements List {
     public Object[] toArray() {
 
         Object[] objects = new Object[size];
-        ByteBuffer ib = (ByteBuffer) b.duplicate().rewind();
+        ByteBuffer ib = (ByteBuffer) byteBuffer.duplicate().rewind();
         int c = 0;
         while (ib.hasRemaining()) objects[c++] = byteBufferObjectFunction.apply(ib);
         return objects;
@@ -113,7 +108,7 @@ class ReadOnlyBBList implements List {
 
     @Override
     public Object get(int index) {
-        return byteBufferObjectFunction.apply((ByteBuffer) b.duplicate().position(index * vsize));
+        return byteBufferObjectFunction.apply((ByteBuffer) byteBuffer.duplicate().position(index * per));
     }
 
     @Override
@@ -134,7 +129,7 @@ class ReadOnlyBBList implements List {
     @Override
     public int indexOf(Object o) {
         contains(o);
-        return b.position()/per;
+        return byteBuffer.position()/per;
     }
 
     @Override

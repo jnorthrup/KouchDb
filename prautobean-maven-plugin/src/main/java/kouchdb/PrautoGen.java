@@ -1,6 +1,28 @@
 package kouchdb;
 
+/*
+ * Copyright 2001-2005 The Apache Software Foundation.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import com.dyuproject.protostuff.parser.EnumGroup;
 import com.dyuproject.protostuff.parser.*;
+ import org.apache.maven.plugin.AbstractMojo;
+import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.plugin.MojoFailureException;
+import org.apache.maven.plugins.annotations.Mojo;
+import org.apache.maven.plugins.annotations.Parameter;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -10,46 +32,67 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class PrautoSpector {
+/**
+ * Goal which touches a timestamp file.
+ *
+  */
+@Mojo( name = "prautobean-maven-plugin"/*, defaultPhase = LifecyclePhase.PROCESS_SOURCES*/ )
+public class PrautoGen
+    extends AbstractMojo
+{
+
+    @Parameter(defaultValue = "${project.basedir}/src/main/proto")
+    public String sourceDirectory;
+    @Parameter(defaultValue = "${project.build.outputDirectory}/generated-sources")
+    public String outputDirectory;
+//
+//    @Override
+//    public void execute() throws MojoExecutionException, MojoFailureException {
+//
+//    }
+    @Override
+    public void execute() throws MojoExecutionException, MojoFailureException {
+
+        try {
+            String[] args = new String[]{sourceDirectory, outputDirectory};
+
+            Path path = Paths.get(args.length > 0 ? args[0] : "src/main/proto/");
+
+            Files.walkFileTree(path, new SimpleFileVisitor<Path>() {
+                @Override
+                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs)
+                        throws IOException {
+                    boolean regularFile = attrs.isRegularFile();
+                    if (regularFile) {
+                        try {
+
+                            Proto target = new Proto();
+                            ProtoUtil.loadFrom(Files.newBufferedReader(file), target);
+                            String javaPackageName = target.getJavaPackageName();
+                            outdir = Paths.get((args.length > 1 ? args[1] : "target/generated-sources") + '/' + javaPackageName.replace('.', '/'));
+
+                            Path directories = Files.createDirectories(PrautoGen.outdir);
+                            System.out.println("writing to " + directories.toUri());
+
+                            target.getMessages().forEach(PrautoGen::descend);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                        PrautoGen.enums.forEach(PrautoGen::printEnum);
+                        PrautoGen.messages.forEach(PrautoGen::printMessage);
+                    }
+                    return FileVisitResult.CONTINUE;
+                }
+
+
+            });
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
     static Map<String, StripeLeveler> messages = new LinkedHashMap<>();
     private static Map<String, EnumGroup> enums = new LinkedHashMap<>();
     private static Path outdir;
-
-    public static void main(String... args) throws IOException {
-
-        Path path = Paths.get(args.length > 0 ? args[0] : "src/main/proto/");
-
-        Files.walkFileTree(path, new SimpleFileVisitor<Path>() {
-            @Override
-            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs)
-                    throws IOException {
-                 boolean regularFile = attrs.isRegularFile();
-                if (regularFile) {
-                    try {
-
-                        Proto target = new Proto();
-                        ProtoUtil.loadFrom(Files.newBufferedReader(file), target);
-                        String javaPackageName = target.getJavaPackageName();
-                        outdir = Paths.get((args.length > 1 ? args[1] : "target/generated-sources")+javaPackageName.replace('.','/'));
-
-                        Path directories = Files.createDirectories(outdir);
-                        System.out.println("writing to "+ directories.toUri());
-
-                        target.getMessages().forEach(PrautoSpector::descend);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                    enums.forEach(PrautoSpector::printEnum);
-                    messages.forEach(PrautoSpector::printMessage);
-                }
-                return FileVisitResult.CONTINUE;
-            }
-
-
-        });
-
-
-    }
 
     private static void printMessage(String k, StripeLeveler v) {
 
@@ -145,15 +188,12 @@ public class PrautoSpector {
                 inFirst.add(aClass.getSimpleName());
             }
         }
-
         public Map<String, List<Field>> stripes = new LinkedHashMap<>();
         private Message message;
 
         public StripeLeveler(Message message) {
-
             this.message = message;
         }
-
         private void addField(Field<?> field, String javaType1) {
             Map<String, List<Field>> f = this.stripes;
             List<Field> fieldList = f.get(javaType1);
@@ -164,4 +204,5 @@ public class PrautoSpector {
             fieldList.add(field);
         }
     }
+
 }
