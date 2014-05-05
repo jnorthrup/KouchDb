@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>kouchdb</groupId>
@@ -19,16 +20,53 @@
     <modules>
         <module>prautobean-annotations</module>
         <module>prautobean-maven-plugin</module>
-         <module>cxxdb</module>
+        <module>cxxdb</module>
         <module>nio2</module>
         <module>kvdb</module>
-  </modules>
+    </modules>
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.apache.maven</groupId>
+                <artifactId>maven-plugin-api</artifactId>
+                <version>3.2.1</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.maven.plugin-tools</groupId>
+                <artifactId>maven-plugin-annotations</artifactId>
+                <version>3.4-SNAPSHOT</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
     <build>
         <pluginManagement>
-            <plugins><plugin>
+            <plugins>
+                <plugin>
+                    <groupId>com.googlecode.maven-java-formatter-plugin</groupId>
+                    <artifactId>maven-java-formatter-plugin</artifactId>
+                    <version>0.4</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>3.1</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-site-plugin</artifactId>
+                    <version>3.3</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-plugin-plugin</artifactId>
+                    <version>3.3-SNAPSHOT</version>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+        <plugins>
+            <plugin>
                 <groupId>com.googlecode.maven-java-formatter-plugin</groupId>
                 <artifactId>maven-java-formatter-plugin</artifactId>
-                <version>0.3.1</version>
                 <executions>
                     <execution>
                         <goals>
@@ -44,91 +82,88 @@
                     <!--<configFile>https://raw.github.com/jnorthrup/RelaxFactory/x0uchdb/fmt/gwt-format.xml</configFile>-->
 
                     <!--http://code.google.com/p/google-web-toolkit/source/browse/trunk/eclipse/settings/code-style/gwt-format.xml</configFile>&ndash;&gt;-->
-                    <configFile>${project.basedir}/../fmt/gwt-format.xml</configFile>
+                    <!--<configFile>${project.basedir}/../fmt/gwt-format.xml</configFile>-->
                     <lineEnding>LF</lineEnding>
                 </configuration>
             </plugin>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-compiler-plugin</artifactId>
-                    <version>3.1</version>
-                    <configuration>
-                        <source>1.8</source>
-                        <target>1.8</target>
-                    </configuration>
-                </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>1.8</source>
+                    <target>1.8</target>
+                </configuration>
+            </plugin>
 
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-site-plugin</artifactId>
-                    <version>3.3</version>
-                </plugin>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-plugin-plugin</artifactId>
-                    <version>3.2</version>
-                    <configuration>
-                        <skipErrorNoDescriptorsFound>true</skipErrorNoDescriptorsFound>
-                    </configuration>
-                    <executions>
-                        <execution>
-                            <id>mojo-descriptor</id>
-                            <phase>process-classes</phase>
-                            <goals>
-                                <goal>descriptor</goal>
-                            </goals>
-                        </execution>
-                    </executions>
-                </plugin>
-            </plugins>
-        </pluginManagement>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-site-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-plugin-plugin</artifactId>
 
+            </plugin>
+        </plugins>
     </build>
     <reporting>
-    <plugins>
-        <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-surefire-report-plugin</artifactId>
-            <version>2.12.4</version>
-        </plugin>
-        <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-jxr-plugin</artifactId>
-            <version>2.3</version>
-        </plugin>
-        <plugin>
-            <groupId>org.codehaus.mojo</groupId>
-            <artifactId>taglist-maven-plugin</artifactId>
-            <version>2.4</version>
-        </plugin>
-        <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-pmd-plugin</artifactId>
-            <version>2.7.1</version>
-            <configuration>
-                <targetJdk>${java.specification.version}</targetJdk>
-                <rulesets>
-                    <!--<ruleset>rulesets/android.xml</ruleset>-->
-                    <ruleset>rulesets/logging-java.xml</ruleset>
-                    <!--<ruleset>rulesets/j2ee.xml</ruleset>-->
-                    <ruleset>rulesets/design.xml</ruleset>
-                    <!--<ruleset>rulesets/basic-jsp.xml</ruleset>-->
-                    <ruleset>rulesets/basic.xml</ruleset>
-                    <ruleset>rulesets/imports.xml</ruleset>
-                    <ruleset>rulesets/typeresolution.xml</ruleset>
-                    <ruleset>rulesets/unusedcode.xml</ruleset>
-                    <ruleset>rulesets/controversial.xml</ruleset>
-                    <ruleset>rulesets/coupling.xml</ruleset>
-                    <ruleset>rulesets/strictexception.xml</ruleset>
-                    <ruleset>rulesets/codesize.xml</ruleset>
-                    <ruleset>rulesets/junit.xml</ruleset>
-                    <ruleset>rulesets/optimizations.xml</ruleset>
-                    <ruleset>rulesets/basic-jsf.xml</ruleset>
-                    <ruleset>rulesets/favorites.xml</ruleset>
-                </rulesets>
-            </configuration>
-        </plugin>
-    </plugins>
-</reporting>
-
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-report-plugin</artifactId>
+                <version>2.17</version>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jxr-plugin</artifactId>
+                <version>2.4</version>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>taglist-maven-plugin</artifactId>
+                <version>2.4</version>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-pmd-plugin</artifactId>
+                <version>3.1</version>
+                <configuration>
+                    <targetJdk>${java.specification.version}</targetJdk>
+                    <rulesets>
+                        <!--<ruleset>rulesets/android.xml</ruleset>-->
+                        <ruleset>rulesets/logging-java.xml</ruleset>
+                        <!--<ruleset>rulesets/j2ee.xml</ruleset>-->
+                        <ruleset>rulesets/design.xml</ruleset>
+                        <!--<ruleset>rulesets/basic-jsp.xml</ruleset>-->
+                        <ruleset>rulesets/basic.xml</ruleset>
+                        <ruleset>rulesets/imports.xml</ruleset>
+                        <ruleset>rulesets/typeresolution.xml</ruleset>
+                        <ruleset>rulesets/unusedcode.xml</ruleset>
+                        <ruleset>rulesets/controversial.xml</ruleset>
+                        <ruleset>rulesets/coupling.xml</ruleset>
+                        <ruleset>rulesets/strictexception.xml</ruleset>
+                        <ruleset>rulesets/codesize.xml</ruleset>
+                        <ruleset>rulesets/junit.xml</ruleset>
+                        <ruleset>rulesets/optimizations.xml</ruleset>
+                        <ruleset>rulesets/basic-jsf.xml</ruleset>
+                        <ruleset>rulesets/favorites.xml</ruleset>
+                    </rulesets>
+                </configuration>
+            </plugin>
+        </plugins>
+    </reporting>
+    <repositories>
+        <repository>
+            <id>apache.snapshots</id>
+            <url>http://repository.apache.org/snapshots/</url>
+            <snapshots/>
+        </repository>
+    </repositories>
+    <pluginRepositories>
+        <pluginRepository>
+            <id>apache.snapshots</id>
+            <url>http://repository.apache.org/snapshots/</url>
+            <snapshots/>
+        </pluginRepository>
+    </pluginRepositories>
 </project>
