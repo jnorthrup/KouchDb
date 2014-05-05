@@ -18,7 +18,7 @@
     </properties>
 
     <modules>
-        <module>prautobean-annotations</module>
+        <module>prautobean-lib</module>
         <module>prautobean-maven-plugin</module>
         <module>cxxdb</module>
         <module>nio2</module>

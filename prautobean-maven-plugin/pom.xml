@@ -37,7 +37,7 @@
         </dependency>
         <dependency>
             <groupId>kouchdb</groupId>
-            <artifactId>prautobean-annotations</artifactId>
+            <artifactId>prautobean-lib</artifactId>
             <version>0.0.0.1</version>
         </dependency>
     </dependencies>
