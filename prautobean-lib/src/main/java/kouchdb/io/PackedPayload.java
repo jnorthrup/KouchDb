@@ -20,10 +20,10 @@ import static java.util.Arrays.asList;
 /**
  * takes autobean-like interface. writes {non-optional,optional}{booelan,other}as bitset, then length-prefixed bytes.  Lists are length-prefixed payloads
  *
- * @param <P>
- * @param <C>
+ * @param <ProtoMessage>
+ * @param <ClazProto>
  */
-public class PackedPayload<P, C extends Class<P>> {
+public class PackedPayload<ProtoMessage, ClazProto extends Class<ProtoMessage>> {
     /**
      * a nil holder
      */
@@ -130,7 +130,7 @@ public class PackedPayload<P, C extends Class<P>> {
      *
      * @param theAutoBeanClass an-autobean like generated protobuf proxy interface
      */
-    public PackedPayload(C theAutoBeanClass) {
+    public PackedPayload(ClazProto theAutoBeanClass) {
         AtomicInteger nc = new AtomicInteger(0);
         asList(theAutoBeanClass.getDeclaredMethods()).forEach(method -> {
             if (null == method.getAnnotation(ProtoNumber.class)) return;
@@ -142,8 +142,10 @@ public class PackedPayload<P, C extends Class<P>> {
         });
         bitsetLen = bool.size()
                 + optbool.size() + opt.size();
-        bitsetBytes = new BitSet(bitsetLen).toByteArray().length;//bitset probably gets this right.
+        BitSet bitSet = new BitSet(bitsetLen);
+        bitSet.set(bitsetLen-1);
 
+        bitsetBytes = bitSet.toByteArray().length;//bitset probably gets this right.
 
         init(theAutoBeanClass);
     }
@@ -160,7 +162,7 @@ public class PackedPayload<P, C extends Class<P>> {
         } else if (null != encodingType.getAnnotation(ProtoOrigin.class)) {
             try {
                 PackedPayload packedPayload = codeSmell.get(encodingType);
-                int put = packedPayload.put(data, buffer);//has own fixup 
+                int put = packedPayload.put(data, buffer);//has own fixup
             } catch (InvocationTargetException | IllegalAccessException e) {
                 e.printStackTrace();
             }
@@ -173,11 +175,11 @@ public class PackedPayload<P, C extends Class<P>> {
         return String.class == encodingType || byte[].class == encodingType || List.class.isAssignableFrom(encodingType) || null != encodingType.getAnnotation(ProtoOrigin.class);
     }
 
-    private void init(C theAutoBean) {
+    private void init(ClazProto theAutoBean) {
         codeSmell.put(theAutoBean, this);
     }
 
-    public int put(P p, ByteBuffer b) throws InvocationTargetException, IllegalAccessException {
+    public int put(ProtoMessage p, ByteBuffer b) throws InvocationTargetException, IllegalAccessException {
         int fixup = b.position();
         BitSet bitSet1 = new BitSet(bitsetLen);
         int bitset = 0;
@@ -185,9 +187,7 @@ public class PackedPayload<P, C extends Class<P>> {
             try {
                 if (Boolean.TRUE.equals(method.invoke(p)))
                     bitSet1.set(bitset++);
-            } catch (IllegalAccessException e) {
-                e.printStackTrace();
-            } catch (InvocationTargetException e) {
+            } catch (IllegalAccessException | InvocationTargetException e) {
                 e.printStackTrace();
             }
         }
@@ -195,9 +195,7 @@ public class PackedPayload<P, C extends Class<P>> {
             try {
                 if (Boolean.TRUE.equals(method.invoke(p)))
                     bitSet1.set(bitset++);
-            } catch (IllegalAccessException e) {
-                e.printStackTrace();
-            } catch (InvocationTargetException e) {
+            } catch (IllegalAccessException | InvocationTargetException e) {
                 e.printStackTrace();
             }
         }
@@ -205,9 +203,7 @@ public class PackedPayload<P, C extends Class<P>> {
             try {
                 if (null != method.invoke(p))
                     bitSet1.set(bitset++);
-            } catch (IllegalAccessException e) {
-                e.printStackTrace();
-            } catch (InvocationTargetException e) {
+            } catch (IllegalAccessException | InvocationTargetException e) {
                 e.printStackTrace();
             }
         }
@@ -229,12 +225,13 @@ public class PackedPayload<P, C extends Class<P>> {
         return i;
     }
 
-    public P get(C proxyClass, ByteBuffer b) throws InvocationTargetException, IllegalAccessException {
-        int fixup = b.getInt();
-        int hold = b.limit();
-        int position = b.position();
-        BitSet bitSet = BitSet.valueOf((ByteBuffer) b.limit(position + bitsetBytes));
-        b.limit(hold);
+    public ProtoMessage get(ClazProto proxyClass, ByteBuffer in) throws InvocationTargetException, IllegalAccessException {
+        int fixup = in.getInt();
+        int hold = in.limit();
+        int position = in.position();
+        BitSet bitSet = BitSet.valueOf((ByteBuffer) in.limit(position + bitsetBytes));
+        byte[] bytes = new byte[in.remaining()];
+        in.limit(hold);
 
         int skip = bool.size() + optbool.size();
 
@@ -242,17 +239,18 @@ public class PackedPayload<P, C extends Class<P>> {
         Map<Method, Object> values = new LinkedHashMap<>();
 
         Consumer<Method> harvest = method -> {
-            offsets.put(method, b.position());
+            offsets.put(method, in.position());
             Class<?> encodingType = method.getReturnType();
 
             Object r;
             if (VIEWCLASSES.contains(encodingType)) {
-                r = VIEWGETTER.get(encodingType).apply(b);
+                r = VIEWGETTER.get(encodingType).apply(in);
                 values.put(method, r);
             } else if (isPackedObjectType(encodingType)) {
-                offsets.put(method, b.position());
-                int offset = b.getInt();
-                b.position(b.position() + offset);
+                int position1 = in.position();
+                offsets.put(method, position1);
+                int offset = in.getInt();
+                in.position(in.position() + offset);
             }
         };
         nonOpt.forEach(harvest);
@@ -263,13 +261,16 @@ public class PackedPayload<P, C extends Class<P>> {
                 harvest.accept(method);
         }
         Object o = Proxy.newProxyInstance(proxyClass.getClassLoader(), new Class[]{proxyClass}, (proxy, method, args) -> {
-            if (values.containsKey(method)) return values.get(method);
-            Object r = descend(b, bitSet, offsets, method);
+            Object r;
+            if (values.containsKey(method)) {
+                r= values.get(method);
+            }
+            r = descend(in, bitSet, offsets, method);
 
             values.put(method, r);
             return r;
         });
-        return (P) o;
+        return (ProtoMessage) o;
     }
 
     private Object descend(ByteBuffer b, BitSet bitSet, Map<Method, Integer> offsets, Method method) {

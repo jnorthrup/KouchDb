@@ -1,22 +1,25 @@
 package kouchdb.command;
 
+import kouchdb.io.PackedPayload;
 import org.junit.Test;
 
+import java.lang.reflect.InvocationTargetException;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-/**
- * Created by jim on 5/5/14.
- */
+
 
 public class PackedPayloadTest {
 
-    @Test
+    @Test public
     void packTest() {
+        ByteBuffer byteBuffer = ByteBuffer.allocateDirect(256 << 10);
         CreateOptions createOptions = new CreateOptions() {
             @Override
-            public boolean getAuto_compaction() {
+            public boolean getAutoCompaction() {
                 return true;
             }
 
@@ -40,7 +43,7 @@ public class PackedPayloadTest {
                 ArrayList<CreateOptions> createOptionses = new ArrayList<>();
                 createOptionses.add(new CreateOptions() {
                     @Override
-                    public boolean getAuto_compaction() {
+                    public boolean getAutoCompaction() {
                         return false;
                     }
 
@@ -71,12 +74,20 @@ public class PackedPayloadTest {
                 });
                 return createOptionses;
             }
-
             @Override
             public List<String> getChallenge2() {
                 return Collections.emptyList();
             }
         };
+        PackedPayload<CreateOptions, Class<CreateOptions>> createOptionsClassPackedPayload = new PackedPayload<>(CreateOptions.class);
+        try {
+            createOptionsClassPackedPayload.put(createOptions, byteBuffer);
+            System.err.println(StandardCharsets.UTF_8.decode((ByteBuffer) byteBuffer.duplicate().flip()));
+            CreateOptions createOptions1 = createOptionsClassPackedPayload.get(CreateOptions.class, (ByteBuffer) byteBuffer.flip());
+            assert createOptions1.getCache().equals(createOptions.getCache());
+        } catch (InvocationTargetException | IllegalAccessException e) {
+            e.printStackTrace();
+        }
     }
 
 }

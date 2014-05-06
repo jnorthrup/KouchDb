@@ -60,7 +60,8 @@ public class PrautoGen
         try (BufferedWriter bufferedWriter = Files.newBufferedWriter(path,StandardOpenOption.CREATE,StandardOpenOption.TRUNCATE_EXISTING,StandardOpenOption.WRITE);
              PrintWriter pw = new PrintWriter(bufferedWriter)
         ) {
-            pw.println("package " + javaPackageName + ";import kouchdb.ann.*;\n\n\n@ProtoOrigin(" + '"' + v.message.getFullName() + '"' + ")\ninterface " + cname + "{");
+            pw.println("package " + javaPackageName + ";\n\nimport kouchdb.ann.*;\n\n\n@ProtoOrigin(" + '"' + v.message.getFullName() + '"' + ")\n" +
+                    "interface " + cname + "{");
             Map<String, List<Field>> f = v.stripes;
             AtomicInteger bits = new AtomicInteger(0);
             //package up the primitives first
@@ -100,7 +101,8 @@ public class PrautoGen
         //System.err.println("writing enum: " + path);
         try (BufferedWriter bufferedWriter = Files.newBufferedWriter(path); PrintWriter pw = new PrintWriter(bufferedWriter)) {
 
-            pw.println("package " + javaPackageName + ";import kouchdb.ann.*;\n\n\nenum " + k + "{");
+            pw.println("package " + javaPackageName + ";\n\nimport kouchdb.ann.*;\n\n\n@ProtoOrigin(" + '"' + v. getFullName() + '"' + ")\n" +
+                    "enum " + k + "{");
             StringJoiner stringJoiner = new StringJoiner(",");
             v.getValues().stream().map(EnumGroup.Value::getName).forEachOrdered(stringJoiner::add);
             pw.println(stringJoiner.toString());
@@ -130,7 +132,7 @@ public class PrautoGen
         messages.put(message.getFullName(), x);
         List<Field<?>> fields = message.getFields();
         for (Field<?> field : fields) {
-            String javaType1 = field.getJavaType().replace("ByteString","List<Byte>");
+            String javaType1 = field.getJavaType().replace("ByteString","java.util.List<Byte>");
             x.addField(field, javaType1);
         }
         Collection<EnumGroup> nestedEnumGroups = message.getNestedEnumGroups();

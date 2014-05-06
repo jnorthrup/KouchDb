@@ -12,7 +12,7 @@ public interface CreateOptions {
 
     @Optional(value = 1)
     @ProtoNumber(value = 2)
-    boolean getAuto_compaction();
+    boolean getAutoCompaction();
 
 
     @Optional(2)
@@ -31,8 +31,6 @@ public interface CreateOptions {
 
     @Optional(5)
     @ProtoNumber(5)
-
-
     List<CreateOptions> getChallenge();
 
     @Optional(6)
