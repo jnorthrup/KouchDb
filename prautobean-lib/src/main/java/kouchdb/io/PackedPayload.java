@@ -1,4 +1,4 @@
-package kouchdb;
+package kouchdb.io;
 
 import kouchdb.ann.ProtoNumber;
 import kouchdb.ann.ProtoOrigin;

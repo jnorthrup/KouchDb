@@ -1,4 +1,4 @@
-package kouchdb;
+package kouchdb.io;
 
 import java.nio.ByteBuffer;
 import java.util.Collection;

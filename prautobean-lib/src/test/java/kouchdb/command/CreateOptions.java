@@ -1,4 +1,5 @@
-package kouchdb;
+package kouchdb.command
+        ;
 
 import kouchdb.ann.Optional;
 import kouchdb.ann.ProtoNumber;
