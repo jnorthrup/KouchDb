@@ -177,8 +177,6 @@ public class PrautoGen
                     }
                     return FileVisitResult.CONTINUE;
                 }
-
-
             });
         } catch (IOException e) {
             e.printStackTrace();
