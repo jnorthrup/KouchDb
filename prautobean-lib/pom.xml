@@ -40,12 +40,17 @@
             <version>4.11</version>
             <scope>test</scope>
         </dependency>
-        <!--
-                <dependency>
-                    <groupId>com.dyuproject.protostuff</groupId>
-                    <artifactId>protostuff-parser</artifactId>
-                    <version>${protostuff.version}</version>
-                </dependency>-->
+      <dependency>
+        <groupId>org.javolution</groupId>
+        <artifactId>javolution</artifactId>
+        <version>6.0.0</version>
+      </dependency>
+      <!--
+              <dependency>
+                  <groupId>com.dyuproject.protostuff</groupId>
+                  <artifactId>protostuff-parser</artifactId>
+                  <version>${protostuff.version}</version>
+              </dependency>-->
 
     </dependencies>
 

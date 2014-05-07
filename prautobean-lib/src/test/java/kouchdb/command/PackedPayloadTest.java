@@ -4,10 +4,12 @@ import kouchdb.io.PackedPayload;
 import org.junit.Test;
 
 import java.lang.reflect.InvocationTargetException;
+import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.BitSet;
 import java.util.List;
 
 import static java.lang.Integer.toBinaryString;
@@ -17,11 +19,14 @@ public class PackedPayloadTest {
 
     @Test public
     void packTest() {
+        final BitSet bitSet = new BitSet(6);
+        bitSet.set(0, 6);
+        System.err.println(Integer.toBinaryString(bitSet.toByteArray()[0]));
         ByteBuffer byteBuffer = ByteBuffer.allocateDirect(256 << 10);
         CreateOptions createOptions = new CreateOptions() {
             @Override
             public boolean getAutoCompaction() {
-                return false;
+                return true;
             }
 
             @Override
@@ -82,15 +87,21 @@ public class PackedPayloadTest {
         };
         PackedPayload<CreateOptions> createOptionsClassPackedPayload = new PackedPayload<>(CreateOptions.class);
         createOptionsClassPackedPayload.put(createOptions, byteBuffer);
-        System.err.println(StandardCharsets.UTF_8.decode((ByteBuffer) byteBuffer.duplicate().flip()));
+        final Buffer flip = byteBuffer.flip();
 
-        byte b = byteBuffer.get(5);
-        System.err.println(""+toBinaryString(b & 0xff));
+        System.err.println(StandardCharsets.UTF_8.decode((ByteBuffer) byteBuffer.duplicate()));
 
-        assert 0b11111100 == (b & 0xff); //bitmap
+        final ByteBuffer duplicate = (ByteBuffer) byteBuffer.duplicate(   );
+        duplicate.getInt();//skip an int.
+        byte b = duplicate. get( );
+        System.err.println( toBinaryString(b & 0xff));
 
-        CreateOptions createOptions1 = createOptionsClassPackedPayload.get(CreateOptions.class, (ByteBuffer) byteBuffer.flip());
-        assert createOptions1.getCache().equals(createOptions.getCache());
+        assert 0b111111 == (b & 0xff); //bitmap
+
+        CreateOptions createOptions1 = createOptionsClassPackedPayload.get(CreateOptions.class, (ByteBuffer) flip);
+        final String cache = createOptions.getCache();
+        final String cache1 = createOptions1.getCache();
+        assert cache1.equals(cache);
     }
 
 }
