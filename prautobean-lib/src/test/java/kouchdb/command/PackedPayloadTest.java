@@ -3,7 +3,6 @@ package kouchdb.command;
 import kouchdb.io.PackedPayload;
 import org.junit.Test;
 
-import java.lang.reflect.InvocationTargetException;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -17,13 +16,13 @@ import static java.lang.Integer.toBinaryString;
 
 public class PackedPayloadTest {
 
-    @Test public
-    void packTest() {
-        final BitSet bitSet = new BitSet(6);
+    @Test
+    public void packTest() {
+        BitSet bitSet = new BitSet(6);
         bitSet.set(0, 6);
         System.err.println(Integer.toBinaryString(bitSet.toByteArray()[0]));
         ByteBuffer byteBuffer = ByteBuffer.allocateDirect(256 << 10);
-        CreateOptions createOptions = new CreateOptions() {
+        ComplexPrautoBean complexPrautoBean = new ComplexPrautoBean() {
             @Override
             public boolean getAutoCompaction() {
                 return true;
@@ -45,9 +44,9 @@ public class PackedPayloadTest {
             }
 
             @Override
-            public List<CreateOptions> getChallenge() {
-                ArrayList<CreateOptions> createOptionses = new ArrayList<>();
-                createOptionses.add(new CreateOptions() {
+            public List<ComplexPrautoBean> getChallenge() {
+                ArrayList<ComplexPrautoBean> createOptionses = new ArrayList<>();
+                createOptionses.add(new ComplexPrautoBean() {
                     @Override
                     public boolean getAutoCompaction() {
                         return false;
@@ -69,7 +68,7 @@ public class PackedPayloadTest {
                     }
 
                     @Override
-                    public List<CreateOptions> getChallenge() {
+                    public List<ComplexPrautoBean> getChallenge() {
                         return null;
                     }
 
@@ -77,30 +76,48 @@ public class PackedPayloadTest {
                     public List<String> getChallenge2() {
                         return Arrays.asList(new String[]{"c", "d"});
                     }
+
+                    @Override
+                    public List<TheEnum> getEnumThingy() {
+                        return null;
+                    }
                 });
                 return createOptionses;
             }
+
             @Override
             public List<String> getChallenge2() {
                 return Arrays.asList("a", "b");
             }
+
+            @Override
+            public List<TheEnum> getEnumThingy() {
+                List<TheEnum> lists =
+                        (Arrays.asList(TheEnum.y, TheEnum.y, TheEnum.z));
+
+                return lists;
+            }
         };
-        PackedPayload<CreateOptions> createOptionsClassPackedPayload = new PackedPayload<>(CreateOptions.class);
-        createOptionsClassPackedPayload.put(createOptions, byteBuffer);
-        final Buffer flip = byteBuffer.flip();
+        PackedPayload<ComplexPrautoBean> createOptionsClassPackedPayload = new PackedPayload<>(ComplexPrautoBean.class);
+        createOptionsClassPackedPayload.put(complexPrautoBean, byteBuffer);
+        Buffer flip = byteBuffer.flip();
 
         System.err.println(StandardCharsets.UTF_8.decode((ByteBuffer) byteBuffer.duplicate()));
 
-        final ByteBuffer duplicate = (ByteBuffer) byteBuffer.duplicate(   );
+        ByteBuffer duplicate = (ByteBuffer) byteBuffer.duplicate();
         duplicate.getInt();//skip an int.
-        byte b = duplicate. get( );
-        System.err.println( toBinaryString(b & 0xff));
+        byte b = duplicate.get();
+        System.err.println(toBinaryString(b & 0xff));
 
-        assert 0b111111 == (b & 0xff); //bitmap
+        assert 0b1111111 == (b & 0xff); //bitmap
 
-        CreateOptions createOptions1 = createOptionsClassPackedPayload.get(CreateOptions.class, (ByteBuffer) flip);
-        final String cache = createOptions.getCache();
-        final String cache1 = createOptions1.getCache();
+        ComplexPrautoBean complexPrautoBean1 = createOptionsClassPackedPayload.get(ComplexPrautoBean.class, (ByteBuffer) flip);
+
+        TheEnum theEnum = complexPrautoBean1.getEnumThingy().get(2);
+        assert TheEnum.z == theEnum;
+        String cache = complexPrautoBean.getCache();
+        String cache1 = complexPrautoBean1.getCache();
+
         assert cache1.equals(cache);
     }
 

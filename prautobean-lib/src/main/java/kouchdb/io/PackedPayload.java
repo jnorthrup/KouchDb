@@ -1,9 +1,13 @@
 package kouchdb.io;
 
+import kouchdb.ann.Optional;
 import kouchdb.ann.ProtoNumber;
 import kouchdb.ann.ProtoOrigin;
 
-import java.lang.reflect.*;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Proxy;
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -39,24 +43,12 @@ public class PackedPayload<ProtoMessage> {
      */
 
     public static final Map<Class, BiConsumer<ByteBuffer, Object>> VIEWSETTER = new HashMap<Class, BiConsumer<ByteBuffer, Object>>() {{
-        put(long.class, (byteBuffer, o) -> {
-            byteBuffer.putLong((long) o);
-        });
-        put(double.class, (byteBuffer, o) -> {
-            byteBuffer.putDouble((double) o);
-        });
-        put(int.class, (byteBuffer, o) -> {
-            byteBuffer.putInt((int) o);
-        });
-        put(float.class, (byteBuffer, o) -> {
-            byteBuffer.putFloat((float) o);
-        });
-        put(short.class, (byteBuffer, o) -> {
-            byteBuffer.putShort((short) o);
-        });
-        put(byte.class, (byteBuffer, o) -> {
-            byteBuffer.put((byte) o);
-        });
+        put(long.class, (byteBuffer, o) -> byteBuffer.putLong((long) o));
+        put(double.class, (byteBuffer, o) -> byteBuffer.putDouble((double) o));
+        put(int.class, (byteBuffer, o) -> byteBuffer.putInt((int) o));
+        put(float.class, (byteBuffer, o) -> byteBuffer.putFloat((float) o));
+        put(short.class, (byteBuffer, o) -> byteBuffer.putShort((short) o));
+        put(byte.class, (byteBuffer, o) -> byteBuffer.put((byte) o));
         put(byte[].class, (byteBuffer, o) -> {
             byte[] o1 = (byte[]) o;
             byteBuffer.putInt(o1.length);
@@ -67,9 +59,7 @@ public class PackedPayload<ProtoMessage> {
             byteBuffer.putInt(o1.length);
             byteBuffer.put(o1);
         });
-        put(boolean.class, (byteBuffer, o) -> {
-            byteBuffer.put((byte) ((boolean) o ? 1 : 0));
-        });
+        put(boolean.class, (byteBuffer, o) -> byteBuffer.put((byte) ((boolean) o ? 1 : 0)));
     }};
 
     /**
@@ -98,9 +88,7 @@ public class PackedPayload<ProtoMessage> {
             put(boolean.class, byteBuffer -> byteBuffer.get() > 0);
         }
     };
-    public static final Comparator<Method> METHOD_COMPARATOR = (o1, o2) -> {
-        return (o1.getAnnotation(ProtoNumber.class).value()) - o2.getAnnotation(ProtoNumber.class).value();
-    };
+    public static final Comparator<Method> METHOD_COMPARATOR = (o1, o2) -> o1.getAnnotation(ProtoNumber.class).value() - o2.getAnnotation(ProtoNumber.class).value();
 
     static Map<Class, PackedPayload> codeSmell = new HashMap<>();
     /**
@@ -136,12 +124,10 @@ public class PackedPayload<ProtoMessage> {
     public PackedPayload(Class<ProtoMessage> theAutoBeanClass) {
         AtomicInteger nc = new AtomicInteger(0);
         asList(theAutoBeanClass.getDeclaredMethods()).forEach(method -> {
-            if (null == method.getAnnotation(ProtoNumber.class)) return;
-            kouchdb.ann.Optional annotation = method.getAnnotation(kouchdb.ann.Optional.class);
-            boolean b2 = annotation == null;
-            boolean b3 = method.getReturnType() == boolean.class || method.getReturnType() == Boolean.class;
-            Collection<Method> l = b2 ? b3 ? bool : nonOpt : b3 ? bool : opt;
-            l.add(method);
+            if (method.isAnnotationPresent(ProtoNumber.class)) {
+                Collection<Method> l = method.getReturnType() == boolean.class || method.getReturnType() == Boolean.class ? bool : method.isAnnotationPresent(Optional.class) ? opt : nonOpt;
+                l.add(method);
+            }
         });
 
         bitsetLen = bool.size() + opt.size();
@@ -178,58 +164,62 @@ public class PackedPayload<ProtoMessage> {
         Map<Method, Object> offsets = new TreeMap<>(METHOD_COMPARATOR);
 
         AtomicInteger c1 = new AtomicInteger(0);
-        bool.forEach(method -> {
-            values.put(method, bitSet.get(c1.getAndIncrement()));
-        });
+        bool.forEach(method -> values.put(method, bitSet.get(c1.getAndIncrement())));
 
         nonOpt.forEach(method -> skim(in, values, offsets, method));
         //handle opt
         c1.set(0);
 
         opt.forEach(method -> {
-            if (bitSet.get(bool.size() + (c1.getAndIncrement()))) skim(in, values, offsets, method);
+            if (bitSet.get(bool.size() + c1.getAndIncrement())) skim(in, values, offsets, method);
             else
                 values.put(method, null);
         });
 
         return (ProtoMessage) Proxy.newProxyInstance(c.getClassLoader(), new Class[]{c}, (proxy, method, args) ->
-                values.computeIfAbsent(method, k ->
-                        offsets.computeIfPresent(k, (k1, v) -> {
-                            in.position((Integer) v);
-                            int len = in.getInt();
-                            ByteBuffer slice = (ByteBuffer) in.slice().limit(len);
+                values.computeIfAbsent(method, k -> offsets.computeIfPresent(k, (k1, v) -> {
+                    in.position((Integer) v);
+                    int len = in.getInt();
+                    final int fin = in.position() + len;
 
-                            Class returnType = method.getReturnType();
-                            Object r = null;
-                            if (returnType.isAnnotationPresent(ProtoOrigin.class))
-                                r = codeSmell.computeIfAbsent(returnType, PackedPayload::new).get(returnType, in);
-                            else if (returnType.isAssignableFrom(List.class)) {
-                                GenericDeclaration genericDeclaration = (GenericDeclaration) returnType.getTypeParameters()[0];
-                                if (VIEWCLASSES.contains(genericDeclaration))
-                                    r = new ReadOnlyBBList((Class) genericDeclaration, VIEWSIZES.get(genericDeclaration), slice);
+                    Class returnType = method.getReturnType();
+                    Object r = null;
+                    if (returnType.isAnnotationPresent(ProtoOrigin.class))
+                        r = codeSmell.computeIfAbsent(returnType, PackedPayload::new).get(returnType, in);
+                    else if (returnType.isAssignableFrom(List.class)) {
+                        //enums lack generic type parms. not sure why
+                        ParameterizedType genericReturnType = (ParameterizedType) method.getGenericReturnType();
+                        Class aClass = (Class) genericReturnType.getActualTypeArguments()[0];
+                        System.err.println("");
 
-                                else {
-                                    ArrayList<Object> objects = new ArrayList<>();
-                                    r = objects;
-                                    Class genericDeclaration1 = (Class) genericDeclaration;
-                                    if (genericDeclaration1.isEnum())
-                                        while (slice.hasRemaining())
-                                            objects.add(genericDeclaration1.getEnumConstants()[slice.getShort()]);
-                                    else {
-                                        PackedPayload packedPayload = codeSmell.computeIfAbsent(genericDeclaration1, PackedPayload::new);
-                                        while (slice.hasRemaining()) {
-                                            Object o = packedPayload.get(genericDeclaration1, in);
-                                            objects.add(o);
-                                        }
-                                    }
+                        if (VIEWSIZES.containsKey(aClass)) {
+                            r = new ReadOnlyBBList(aClass, VIEWSIZES.get(aClass), (ByteBuffer) in.slice().limit(len));
+                            in.position(fin);
+                        }
+                        else {
+                            List<Object> objects = new ArrayList<>();
+                            r = objects;
+                            if (aClass.isEnum())
+                                while (in.position()<fin)
+                                    objects.add(aClass.getEnumConstants()[in.getShort()]);
+                            else {
+                                PackedPayload packedPayload = codeSmell.computeIfAbsent(aClass, PackedPayload::new);
+                                while (in.position()<fin) {
+                                    Object o = packedPayload.get(aClass, in);
+                                    objects.add(o);
                                 }
                             }
-                            return r;
-                        })));
+                        }
+
+                    }
+                    assert in.position()==fin;
+                    return r;
+                })));
     }
 
     public void put(ProtoMessage proto, ByteBuffer out) {
-        int fixup = out.position();
+        int fixupIndex = out.position();
+        int fixup=out.position();
         out.putInt(-1);
         BitSet bitSet = new BitSet(bitsetLen);
         bitSet.set(bitsetLen - 1);
@@ -267,9 +257,8 @@ public class PackedPayload<ProtoMessage> {
 
         });
         int i = out.position() - fixup;
-        ByteBuffer backtrack = (ByteBuffer) out.duplicate().position(fixup);
         byte[] src1 = bitSet.toByteArray();
-        backtrack.putInt(i).put(src1);
+        ((ByteBuffer) out.duplicate().position(fixupIndex)).putInt(i).put(src1);
 
 
     }
@@ -297,19 +286,21 @@ public class PackedPayload<ProtoMessage> {
         } else if (returnType.isAssignableFrom(List.class)) {
             int fixupIndex = out.position();
             out.putInt(-1);
+            int fixup=out.position();
             Class genericReturnType = (Class) ((ParameterizedType) method.getGenericReturnType()).getActualTypeArguments()[0];
 
             List list = (List) value;
-            if (VIEWSETTER.containsKey(genericReturnType))
-                list.forEach(o -> VIEWSETTER.get(genericReturnType).accept(out, o));
-            else if ((genericReturnType).isEnum()) {
-                list.forEach(o -> {
-                    out.putShort((short) ((Enum) o).ordinal());
-                });
-            } else if (genericReturnType.isAnnotationPresent(ProtoOrigin.class)) list.forEach(o -> {
-                writeElement(out, o, null, genericReturnType);
+            if (VIEWSETTER.containsKey(genericReturnType)) {
+                BiConsumer<ByteBuffer, Object> byteBufferObjectBiConsumer = VIEWSETTER.get(genericReturnType);
+
+                list.forEach(o -> byteBufferObjectBiConsumer.accept(out, o));
+            } else if (genericReturnType.isEnum()) list.forEach(o -> {
+                int ordinal = ((Enum) o).ordinal();
+                out.putShort((short) (ordinal & 0xffff));
             });
-            int i = out.position() - fixupIndex;
+            else if (genericReturnType.isAnnotationPresent(ProtoOrigin.class))
+                list.forEach(o -> writeElement(out, o, null, genericReturnType));
+            int i = out.position() - fixup;
             out.putInt(fixupIndex, i);
         }
     }

@@ -7,8 +7,9 @@ import kouchdb.ann.ProtoOrigin;
 
 import java.util.List;
 
-@ProtoOrigin(  "kouchdb.command.CreateDb.CreateOptions")
-public interface CreateOptions {
+
+@ProtoOrigin("kouchdb.command.CreateDb.ComplexPrautoBean")
+public interface ComplexPrautoBean {
 
     @Optional(value = 1)
     @ProtoNumber(value = 2)
@@ -31,10 +32,14 @@ public interface CreateOptions {
 
     @Optional(5)
     @ProtoNumber(5)
-    List<CreateOptions> getChallenge();
+    List<ComplexPrautoBean> getChallenge();
 
     @Optional(6)
     @ProtoNumber(6)
     List<String> getChallenge2();
+
+    @Optional(7)
+    @ProtoNumber(7)
+    List< TheEnum > getEnumThingy();
 
 }
