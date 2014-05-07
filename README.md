@@ -12,6 +12,8 @@ Features
  * a wire compatible couch entity
  * implementation of websocket sessions and async channels
     * protocol buffer mailbox internals
+ * PrautoBeans
+   * autobean compatible interfaces from src/main/proto
  * a dual language (twin) implementation
     *  a java NIO2 async implementation to leverage the particular strengths of java, and more narrowly defined GWT IO built-ins
     *  a c++14 boost/asio/std-http implementation to frame "big data" usecases that starve on erlang io.
@@ -35,3 +37,9 @@ Roadmap
     * inverted indexes and database agnostic lucene configurations as simple as shell scripts or maven additions.
  *  btrfs send/receive deltas add an interesting dimension to existing master-master and cluster wire options
  *  out-of-band fnotify and on inodes-as-docs
+ *  gwt-centric "_design" analogs
+    * upload/edit/sync an attachment hierarchy for gwtc compiled apps
+    * make js-usable clientbundles for spriting and data: urls
+ *  type-safe tables
+    * while having a simplest-possible json directory full of records is easy and sounds like a fantastic default, having a specific schema from Prautobeans can enable mmap as a performance option on feeding mapreduce views or storing them and serving them.
+    * likewise attribute level REST/Websocket methods could be enabled by Prautobean in addition to json document level methods.
