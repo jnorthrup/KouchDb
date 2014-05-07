@@ -3,15 +3,13 @@ package kouchdb.io;
 import kouchdb.ann.ProtoNumber;
 import kouchdb.ann.ProtoOrigin;
 
-import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.GenericDeclaration;
 import java.lang.reflect.Method;
-import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Proxy;
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 import java.util.function.Function;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -21,14 +19,13 @@ import static java.util.Arrays.asList;
  * takes autobean-like interface. writes {non-optional,optional}{booelan,other}as bitset, then length-prefixed bytes.  Lists are length-prefixed payloads
  *
  * @param <ProtoMessage>
- * @param <ClazProto>
  */
-public class PackedPayload<ProtoMessage, ClazProto extends Class<ProtoMessage>> {
+public class PackedPayload<ProtoMessage > {
     /**
      * a nil holder
      */
     public static final byte[] EMPTY = new byte[0];
-    public static final HashSet<Class> VIEWCLASSES = new HashSet<Class>(asList(long.class, double.class, int.class, float.class, short.class, byte.class));
+    public static final HashSet<Class<?>> VIEWCLASSES = new HashSet<Class<?>>(asList(long.class, double.class, int.class, float.class, short.class, byte.class));
     public static final Map<Class, Integer> VIEWSIZES = new HashMap<Class, Integer>() {{
         put(long.class, 8);
         put(double.class, 8);
@@ -104,10 +101,6 @@ public class PackedPayload<ProtoMessage, ClazProto extends Class<ProtoMessage>> 
      */
     public List<Method> bool = new ArrayList<>();
     /**
-     * optional bools.  may be null==false.
-     */
-    public List<Method> optbool = new ArrayList<>();
-    /**
      * optional variables that aren't bools. exist as part of the bitset above plus as n-byte values or ints to hold byte[] strings/blobs
      */
     public List<Method> opt = new ArrayList<>();
@@ -127,177 +120,100 @@ public class PackedPayload<ProtoMessage, ClazProto extends Class<ProtoMessage>> 
 
     /**
      * this initializes the invariants that hold a serialized message.
+     * <p>
+     * <p>
+     * [---len---][---bitset[-bools-][-optbools-]][---nonopt---][---opt---]
      *
      * @param theAutoBeanClass an-autobean like generated protobuf proxy interface
      */
-    public PackedPayload(ClazProto theAutoBeanClass) {
+    public PackedPayload(Class theAutoBeanClass) {
         AtomicInteger nc = new AtomicInteger(0);
         asList(theAutoBeanClass.getDeclaredMethods()).forEach(method -> {
             if (null == method.getAnnotation(ProtoNumber.class)) return;
             kouchdb.ann.Optional annotation = method.getAnnotation(kouchdb.ann.Optional.class);
             boolean b2 = annotation == null;
             boolean b3 = method.getReturnType() == boolean.class || method.getReturnType() == Boolean.class;
-            List<Method> l = b2 ? b3 ? bool : nonOpt : b3 ? optbool : opt;
+            List<Method> l = b2 ? b3 ? bool : nonOpt : b3 ? bool : opt;
             l.add(method);
         });
-        bitsetLen = bool.size()
-                + optbool.size() + opt.size();
+
+        bitsetLen = bool.size() + opt.size();
         BitSet bitSet = new BitSet(bitsetLen);
-        bitSet.set(bitsetLen-1);
-
-        bitsetBytes = bitSet.toByteArray().length;//bitset probably gets this right.
-
+        bitSet.set(bitsetLen - 1);
+        bitsetBytes = bitSet.toByteArray().length;
         init(theAutoBeanClass);
     }
 
-    private static int putLeaf(ByteBuffer buffer, Class encodingType, Object data) {
-        int fixup = buffer.position();
-        if (VIEWSETTER.containsKey(encodingType)) VIEWSETTER.get(encodingType).accept(buffer, data);
-        else if (List.class.isAssignableFrom(encodingType)) {
-            buffer.getInt();
-            for (Object o : (List) data) {
-                putLeaf(buffer, o.getClass(), o);
-            }
-            buffer.putInt(fixup, buffer.position() - fixup);
-        } else if (null != encodingType.getAnnotation(ProtoOrigin.class)) {
-            try {
-                PackedPayload packedPayload = codeSmell.get(encodingType);
-                int put = packedPayload.put(data, buffer);//has own fixup
-            } catch (InvocationTargetException | IllegalAccessException e) {
-                e.printStackTrace();
-            }
+    private static void skim(ByteBuffer in, Map values, Map offsets, Method method) {
+        Class<?> returnType = method.getReturnType();
+        if (VIEWCLASSES.contains(returnType)) {
+            values.put(method, VIEWGETTER.get(returnType).apply(in));
+        } else if (returnType.isEnum()) {
+            values.put(method, returnType.getEnumConstants()[in.getShort()]);
+        } else {
+            offsets.put(method, in.position());
+            int anInt = in.getInt();
+            in.position(in.position() + anInt);
         }
-        int value = buffer.position() - fixup;
-        return value;
     }
 
-    private static boolean isPackedObjectType(Class<?> encodingType) {
-        return String.class == encodingType || byte[].class == encodingType || List.class.isAssignableFrom(encodingType) || null != encodingType.getAnnotation(ProtoOrigin.class);
-    }
-
-    private void init(ClazProto theAutoBean) {
+    private void init(Class theAutoBean) {
         codeSmell.put(theAutoBean, this);
     }
 
-    public int put(ProtoMessage p, ByteBuffer b) throws InvocationTargetException, IllegalAccessException {
-        int fixup = b.position();
-        BitSet bitSet1 = new BitSet(bitsetLen);
-        int bitset = 0;
-        for (Method method : bool) {
-            try {
-                if (Boolean.TRUE.equals(method.invoke(p)))
-                    bitSet1.set(bitset++);
-            } catch (IllegalAccessException | InvocationTargetException e) {
-                e.printStackTrace();
-            }
-        }
-        for (Method method : optbool) {
-            try {
-                if (Boolean.TRUE.equals(method.invoke(p)))
-                    bitSet1.set(bitset++);
-            } catch (IllegalAccessException | InvocationTargetException e) {
-                e.printStackTrace();
-            }
-        }
-        for (Method method : opt) {
-            try {
-                if (null != method.invoke(p))
-                    bitSet1.set(bitset++);
-            } catch (IllegalAccessException | InvocationTargetException e) {
-                e.printStackTrace();
-            }
-        }
-        int position = b.position();
-        for (Method method1 : nonOpt) {
-            Class returnType1 = method1.getReturnType();
-            Object invoke1 = method1.invoke(p);
-            putLeaf(b, returnType1, invoke1);
-        }
-
-
-        for (Method method : opt) {
-            Class returnType = method.getReturnType();
-            Object data = method.invoke(p);
-            if (data != null) putLeaf(b, returnType, data);
-        }
-        int i = b.position() - fixup;
-        b.putInt(fixup, i);
-        return i;
-    }
-
-    public ProtoMessage get(ClazProto proxyClass, ByteBuffer in) throws InvocationTargetException, IllegalAccessException {
+    ProtoMessage get(Class c, ByteBuffer in) {
         int fixup = in.getInt();
-        int hold = in.limit();
-        int position = in.position();
-        BitSet bitSet = BitSet.valueOf((ByteBuffer) in.limit(position + bitsetBytes));
-        byte[] bytes = new byte[in.remaining()];
-        in.limit(hold);
+        byte[] bytes = new byte[bitsetBytes];
+        in.get(bytes);
+        BitSet bitSet = BitSet.valueOf(bytes);
 
-        int skip = bool.size() + optbool.size();
+        Map values = new LinkedHashMap<>(), offsets = new LinkedHashMap<>();
+        //handle nonopt
+        for (Method method : nonOpt) {
+            skim(in, values, offsets, method);
+        }
 
-        Map<Method, Integer> offsets = new LinkedHashMap<>();
-        Map<Method, Object> values = new LinkedHashMap<>();
-
-        Consumer<Method> harvest = method -> {
-            offsets.put(method, in.position());
-            Class<?> encodingType = method.getReturnType();
-
-            Object r;
-            if (VIEWCLASSES.contains(encodingType)) {
-                r = VIEWGETTER.get(encodingType).apply(in);
-                values.put(method, r);
-            } else if (isPackedObjectType(encodingType)) {
-                int position1 = in.position();
-                offsets.put(method, position1);
-                int offset = in.getInt();
-                in.position(in.position() + offset);
-            }
-        };
-        nonOpt.forEach(harvest);
-
-        for (int i = 0, optSize = opt.size(); i < optSize; i++) {
+        //handle opt
+        for (int i = 0; i < opt.size(); i++) {
             Method method = opt.get(i);
-            if (bitSet.get(skip + i))
-                harvest.accept(method);
+            if (bitSet.get(bool.size() + i)) {
+                skim(in, values, offsets, method);
+            } else values.put(method, null);
         }
-        Object o = Proxy.newProxyInstance(proxyClass.getClassLoader(), new Class[]{proxyClass}, (proxy, method, args) -> {
-            Object r;
-            if (values.containsKey(method)) {
-                r= values.get(method);
-            }
-            r = descend(in, bitSet, offsets, method);
+        return (ProtoMessage) Proxy.newProxyInstance(c.getClassLoader(), new Class[]{c}, (proxy, method, args) ->
+                values.computeIfAbsent(method, k ->
+                        offsets.computeIfPresent(k, (k1, v) -> {
+                            in.position((Integer) v);
+                            int len = in.getInt();
+                            ByteBuffer slice = (ByteBuffer) in.slice().limit(len);
 
-            values.put(method, r);
-            return r;
-        });
-        return (ProtoMessage) o;
-    }
+                            Class returnType = method.getReturnType();
+                            Object r = null;
+                            if (null != returnType.getAnnotation(ProtoOrigin.class))
+                                r = codeSmell.computeIfAbsent(returnType, PackedPayload::new).get(returnType, in);
+                            else if (returnType.isAssignableFrom(List.class)) {
+                                GenericDeclaration genericDeclaration = (GenericDeclaration) returnType.getTypeParameters()[0];
+                                if (VIEWCLASSES.contains(genericDeclaration))
+                                    r = new ReadOnlyBBList((Class) genericDeclaration, VIEWSIZES.get(genericDeclaration), slice);
 
-    private Object descend(ByteBuffer b, BitSet bitSet, Map<Method, Integer> offsets, Method method) {
-        Object r = null;
-        if (bool.contains(method)) {
-            r = bitSet.get(bool.indexOf(method));
-        } else if (optbool.contains(method)) r = bitSet.get(optbool.indexOf(method) + bool.size());
-        else {
-            Integer integer = offsets.remove(method);
-            if (null != integer) {
-                b.position(integer);
-                int size = b.getInt();
-                Class encodingType = method.getReturnType();
-                ByteBuffer slice = (ByteBuffer) b.slice().limit(size);
-                if (VIEWGETTER.containsKey(encodingType))
-                    r = VIEWGETTER.get(encodingType).apply(b);
-                else if (List.class.isAssignableFrom(encodingType)) {
-                    Class type = (Class) ((ParameterizedType) encodingType.getGenericInterfaces()[0]).getActualTypeArguments()[0];
-                    if (VIEWCLASSES.contains(type)) {
-                        r = new ReadOnlyBBList(type, size, b);
-                    } else {
-                        List arrayList = (List) (r = new ArrayList());
-                        while (slice.hasRemaining()) arrayList.add(descend(slice, bitSet, offsets, method));
-                    }
-                }
-            }
-        }
-        return r;
+                                else { 
+                                    ArrayList<Object> objects = new ArrayList<>();
+                                    r = objects;
+                                    Class genericDeclaration1 = (Class) genericDeclaration;
+                                    if (genericDeclaration1.isEnum())
+                                        while (slice.hasRemaining())
+                                            objects.add(genericDeclaration1.getEnumConstants()[slice.getShort()]);
+                                    else {
+                                        PackedPayload packedPayload = codeSmell.computeIfAbsent(genericDeclaration1,PackedPayload::new);
+                                        while (slice.hasRemaining()) {
+                                            Object o = packedPayload.get(genericDeclaration1, in);
+                                            objects.add(o);
+                                        }
+                                    }
+                                }
+                            }
+                            return r;
+                        })));
     }
 }
+    

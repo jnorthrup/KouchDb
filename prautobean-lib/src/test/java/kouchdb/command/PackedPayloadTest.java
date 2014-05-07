@@ -7,9 +7,10 @@ import java.lang.reflect.InvocationTargetException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Arrays;
 import java.util.List;
 
+import static java.lang.Integer.toBinaryString;
 
 
 public class PackedPayloadTest {
@@ -20,7 +21,7 @@ public class PackedPayloadTest {
         CreateOptions createOptions = new CreateOptions() {
             @Override
             public boolean getAutoCompaction() {
-                return true;
+                return false;
             }
 
             @Override
@@ -69,20 +70,26 @@ public class PackedPayloadTest {
 
                     @Override
                     public List<String> getChallenge2() {
-                        return null;
+                        return Arrays.asList(new String[]{"c", "d"});
                     }
                 });
                 return createOptionses;
             }
             @Override
             public List<String> getChallenge2() {
-                return Collections.emptyList();
+                return Arrays.asList("a", "b");
             }
         };
         PackedPayload<CreateOptions, Class<CreateOptions>> createOptionsClassPackedPayload = new PackedPayload<>(CreateOptions.class);
         try {
             createOptionsClassPackedPayload.put(createOptions, byteBuffer);
             System.err.println(StandardCharsets.UTF_8.decode((ByteBuffer) byteBuffer.duplicate().flip()));
+            
+            byte b = byteBuffer.get(5);
+            System.err.println(""+toBinaryString(b & 0xff));
+            
+            assert 0b11111100 == (b & 0xff); //bitmap
+            
             CreateOptions createOptions1 = createOptionsClassPackedPayload.get(CreateOptions.class, (ByteBuffer) byteBuffer.flip());
             assert createOptions1.getCache().equals(createOptions.getCache());
         } catch (InvocationTargetException | IllegalAccessException e) {
