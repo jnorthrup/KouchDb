@@ -20,9 +20,8 @@
     <modules>
         <module>prautobean-lib</module>
         <module>prautobean-maven-plugin</module>
-        <module>cxxdb</module>
-        <module>nio2</module>
         <module>kvdb</module>
+        <module>cxxdb</module>
     </modules>
 
     <dependencyManagement>
