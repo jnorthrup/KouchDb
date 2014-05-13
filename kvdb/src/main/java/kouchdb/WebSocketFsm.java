@@ -22,8 +22,7 @@ class WebSocketFsm implements CompletionHandler<Integer, Object> {
         this.socketChannel = socketChannel;
 
         try {
-            System.err.println("+++ " +
-                    new Date()+"session online "+socketChannel.getRemoteAddress()+' ' );
+            System.err.println("+++ " + new Date() + " session online " + socketChannel.getRemoteAddress() + ' ');
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -31,10 +30,14 @@ class WebSocketFsm implements CompletionHandler<Integer, Object> {
 
     @Override
     public void completed(Integer result, Object attachment) {
-        if (response.hasRemaining())
-            socketChannel.write(response);
-        else
-            socketChannel.read(cursor, null, startNewFrameHandler);
+          {
+            while (response.hasRemaining()) try {
+                socketChannel.write(response).get();
+            } catch (Throwable  e) {
+                e.printStackTrace();
+            }
+            socketChannel.read(cursor, this, startNewFrameHandler);
+        }
     }
 
     @Override

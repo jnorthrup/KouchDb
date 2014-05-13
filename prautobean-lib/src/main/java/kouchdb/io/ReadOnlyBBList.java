@@ -134,7 +134,6 @@ import java.util.function.Function;
 
     @Override
     public int lastIndexOf(Object o) {
-
         return 0;
     }
 

@@ -19,6 +19,7 @@ import java.nio.channels.AsynchronousServerSocketChannel;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 import java.util.TreeMap;
 
 import static java.lang.StrictMath.min;
@@ -196,7 +197,8 @@ import static one.xio.HttpHeaders.*;
 public class Server implements Closeable {
     final static boolean $DBG = "true".equals(Config.get("KOUCH_DEBUG", "false"));
     private static final Integer KOUCH_BACKLOG = Integer.valueOf(Config.get("KOUCH_BACKLOG", "16"));
-      static URI WS_URI;
+    public static Object waitObject = new Object();
+    static URI WS_URI;
 
     static {
         try {
@@ -206,16 +208,14 @@ public class Server implements Closeable {
         }
     }
 
-    public  static Object waitObject = new Object();
-
 
     public Server() {
         int port = WS_URI.getPort();
         final String host = WS_URI.getHost();
 
-        try (AsynchronousServerSocketChannel x = AsynchronousServerSocketChannel.open().bind(new InetSocketAddress( InetAddress.getByName(host),  port),KOUCH_BACKLOG)) {
+        try (AsynchronousServerSocketChannel listener = AsynchronousServerSocketChannel.open().bind(new InetSocketAddress(InetAddress.getByName(host), port), KOUCH_BACKLOG)) {
 
-            x.accept(null, new CompletionHandler<AsynchronousSocketChannel, Object>() {
+            listener.accept(null, new CompletionHandler<AsynchronousSocketChannel, Object>() {
                 public boolean hasHeaders;
                 private Rfc822HeaderState rfc822HeaderState;
                 ByteBuffer cursor = ByteBuffer.allocateDirect(1 << 10);
@@ -227,8 +227,7 @@ public class Server implements Closeable {
                     {
                         System.err.println("accept");
                         rfc822HeaderState = new Rfc822HeaderState();
-                        httpRequest = rfc822HeaderState.$req();
-                        httpRequest.headerInterest(
+                        httpRequest = (Rfc822HeaderState.HttpRequest) rfc822HeaderState.$req().headerInterest(
                                 Connection,
                                 Host,
                                 Origin,
@@ -238,6 +237,7 @@ public class Server implements Closeable {
                                 Upgrade
                         );
                     }
+
                     socketChannel.read(cursor, attachment, new CompletionHandler<Integer, Object>() {
 
                                 @Override
@@ -300,21 +300,20 @@ public class Server implements Closeable {
                                                         * name/ defined in Section 3 (a relative URI) or be an absolute
                                                 * http/https URI that, when parsed, has a /resource name/, /host/,
                                                 * and /port/ that match the corresponding ws/wss URI.
-                                                */
-                                                String rhost = httpRequest.headerString(Host);
-                                                if (!(rhost.startsWith(host) &&
-                                                        httpRequest.path().startsWith(WS_URI.getPath()))) {
-                                                    break;
-                                                }
-                                                /* 4.   The request MUST contain a |Host| header field whose value
+                                                */   /* 4.   The request MUST contain a |Host| header field whose value
                                                         * contains /host/ plus optionally ":" followed by /port/ (when not
                                                         * using the default port).
 
                                                     */
-                                                if (null == rhost || rhost.isEmpty()) break;
+                                                String rhost = httpRequest.headerString(Host);
+                                                String path = httpRequest.path();
+                                                String path1 = WS_URI.getPath();
+                                                if (null == rhost || rhost.isEmpty() || !(rhost.startsWith(host) &&
+                                                        path.startsWith(path1)))
+                                                    break;
+
                                                 /* 5.   The request MUST contain an |Upgrade| header field whose value
                                                             * MUST include the "websocket" keyword.
-                                                            *
                                                     */
                                                 if (!httpRequest.headerString(Upgrade).contains("websocket"))
                                                     break;
@@ -368,7 +367,7 @@ public class Server implements Closeable {
                                                 if (13 != Integer.valueOf(httpRequest.headerString(Sec$2dWebSocket$2dVersion)))
                                                     break;
                                                 Rfc822HeaderState.HttpResponse httpResponse = new Rfc822HeaderState().$res();
-                                                TreeMap<String, String> headerStrings = new TreeMap<>();
+                                                Map<String, String> headerStrings = new TreeMap<>();
                                                 /* 4.  If the response lacks a |Sec-WebSocket-Accept| header field or
                                                 * the |Sec-WebSocket-Accept| contains a value other than the
                                                 * base64-encoded SHA-1 of the concatenation of the |Sec-WebSocket-
@@ -390,8 +389,12 @@ public class Server implements Closeable {
                                                 headerStrings.put(Sec$2dWebSocket$2dProtocol.getHeader(), "kvdb");
                                                 headerStrings.put(Upgrade.getHeader(), "websocket");
                                                 headerStrings.put(Connection.getHeader(), "Upgrade");
-                                                ByteBuffer response1 = httpResponse.resCode(HttpStatus.$101).status(HttpStatus.$101).headerStrings(headerStrings).as(ByteBuffer.class);
-                                                System.err.println("sending back: "+httpResponse.as(String.class));
+                                                ByteBuffer response1 = httpResponse
+                                                        .resCode(HttpStatus.$101)
+                                                        .status(HttpStatus.$101)
+                                                        .headerStrings(headerStrings)
+                                                        .as(ByteBuffer.class);
+                                                System.err.println("sending back: " + httpResponse.as(String.class));
 
                                                 wsfsm = new WebSocketFsm(response1, (ByteBuffer) cursor.clear(), socketChannel);
                                                 socketChannel.write(response1, null, wsfsm);
@@ -406,7 +409,7 @@ public class Server implements Closeable {
                                                         public void completed(Integer result, Object attachment) {
                                                             try {
                                                                 socketChannel.close();
-                                                            } catch (IOException e) {
+                                                            } catch (IOException ignored) {
 
                                                             }
                                                         }
