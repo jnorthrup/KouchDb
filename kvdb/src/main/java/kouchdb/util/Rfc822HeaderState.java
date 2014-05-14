@@ -573,15 +573,23 @@ public class Rfc822HeaderState {
      * @return http addHeaderInterest for use with http 1.1
      */
     public String asResponseHeaderString() {
-        String protocol =
-                (null == methodProtocol() ? HTTP_1_1 : methodProtocol()) + SPC + pathResCode() + SPC
-                        + protocolStatus() + CRLF;
-        for (Map.Entry<String, String> stringStringEntry : headerStrings().entrySet()) {
-            protocol += stringStringEntry.getKey() + COLONSPC + stringStringEntry.getValue() + CRLF;
-        }
+        StringBuilder protocol =new StringBuilder();
+        protocol.append(null == methodProtocol() ? HTTP_1_1 : methodProtocol());
+        protocol.append(SPC);
+        protocol.append(pathResCode());
+        protocol.append(SPC);
+        protocol.append(protocolStatus());
+        protocol.append(CRLF);
 
-        protocol += CRLF;
-        return protocol;
+        for (Map.Entry<String, String> stringStringEntry : headerStrings().entrySet())
+        {
+            protocol.append(stringStringEntry.getKey());
+            protocol.append(COLONSPC);
+            protocol.append(stringStringEntry.getValue());
+            protocol.append(CRLF);
+        }
+        protocol.append(CRLF);
+        return protocol.toString();
     }
 
     /**
@@ -624,8 +632,8 @@ public class Rfc822HeaderState {
      * @return http addHeaderInterest for use with http 1.1
      */
     public ByteBuffer asRequestHeaderByteBuffer() {
-        String protocol = asRequestHeaderString();
-        return ByteBuffer.wrap(protocol.getBytes(StandardCharsets.UTF_8));
+        return ByteBuffer.wrap(asRequestHeaderString().getBytes(StandardCharsets.UTF_8));
+
     }
 
     /**
