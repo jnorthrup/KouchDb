@@ -3,9 +3,9 @@ package kouchdb;
 import java.util.Random;
 
 public class WebSocketFrameBuilder {
-    private byte[] maskingKey;
-    private long payloadLength;
-    private boolean isMasked;
+    private byte[] maskingKey = null;
+    private long payloadLength = 0;
+    private boolean isMasked = false;
     private WebSocketFrame.OpCode opcode = WebSocketFrame.OpCode.text;
     private boolean isFin = true;
 

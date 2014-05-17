@@ -1418,8 +1418,9 @@ public enum HttpHeaders {
   private final String header = URLDecoder.decode(name().replace('$', '%'));
   private final ByteBuffer token = StandardCharsets.UTF_8.encode(header);
   private int tokenLen = token.limit();
+    private int sendBufferSize;
 
-  /**
+    /**
    *
    * @param headers bytebuf rfc822
    * @return
@@ -1492,4 +1493,8 @@ public enum HttpHeaders {
 
     return ret;
   }
+
+    static public int getSendBufferSize() {
+        return 4<<10;
+    }
 }

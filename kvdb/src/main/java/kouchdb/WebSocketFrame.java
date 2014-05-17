@@ -144,10 +144,6 @@ public class WebSocketFrame {
     public OpCode opcode;
     public boolean isFin;
 
-    public WebSocketFrame() {
-
-    }
-
     public WebSocketFrame(byte[] maskingKey, long payloadLength, boolean isMasked, OpCode opcode, boolean isFin) {
         this.maskingKey = maskingKey;
         this.payloadLength = payloadLength;
@@ -159,10 +155,9 @@ public class WebSocketFrame {
     public static void applyMask(byte[] mask, ByteBuffer... data1) {
         int c = 0;   
         for (int i = 0; i < data1.length; i++) {
-            ByteBuffer data = (ByteBuffer) data1[i].mark();
-            ByteBuffer slice = data.slice();
-            while (slice.hasRemaining()) data.put((byte) ((mask[c++ % mask.length] & 0xff ^ slice.get() & 0xff) & 0xff));
-            data.reset();
+            ByteBuffer data = data1[i];
+            ByteBuffer overwrite = data.duplicate();
+            while (data.hasRemaining()) overwrite.put((byte) ((mask[c++ % mask.length] & 0xff ^ data.get() & 0xff) & 0xff));
         }
     
      

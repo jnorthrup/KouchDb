@@ -8,12 +8,10 @@ import one.xio.HttpStatus;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.util.Random;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static one.xio.HttpHeaders.*;
@@ -64,30 +62,20 @@ public class Client {
             String hello = "hello";
             byte[] bytes = hello.getBytes();
             ByteBuffer wrap = ByteBuffer.wrap(bytes);
-            WebSocketFrame frame = new WebSocketFrameBuilder()
+            ByteBuffer webSocketFrame = new WebSocketFrameBuilder()
                     .setIsMasked(true)
                     .setOpcode(WebSocketFrame.OpCode.text)
-                    .createWebSocketFrame();
-            ByteBuffer webSocketFrame = frame.as(wrap);
+                    .createWebSocketFrame().as(wrap);
 
-            asynchronousSocketChannel.write (webSocketFrame).get();asynchronousSocketChannel.write(wrap).get();
-            dst.clear();
-            boolean success = false;
 
-            while(!success) {
-                asynchronousSocketChannel.read(dst).get();
-                ByteBuffer tmp = (ByteBuffer) dst.duplicate().rewind();
-                success=frame.apply(tmp);
-                if(success) {
-                    ByteBuffer byteBuffer = ByteBuffer.allocateDirect((int) frame.payloadLength).put((ByteBuffer) tmp.limit(dst.position())) ;
-                    while(byteBuffer.hasRemaining())asynchronousSocketChannel.read(byteBuffer).get();
-                    if(frame.isMasked)frame.applyMask(byteBuffer);
-                    System.err.println("success: "+UTF_8.decode((ByteBuffer) byteBuffer.rewind()));
-                    return;
+            Object o = new Object();
+            synchronized (o) {
+                try {
+                    o.wait();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
                 }
             }
-
-
         } catch (Throwable e) {
             e.printStackTrace();
         }

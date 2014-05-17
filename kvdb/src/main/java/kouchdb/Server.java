@@ -1,32 +1,21 @@
 package kouchdb;
 
-import com.google.common.hash.HashCode;
-import com.google.common.hash.Hashing;
-import com.google.common.io.BaseEncoding;
-import kouchdb.util.Rfc822HeaderState;
-import one.xio.HttpMethod;
-import one.xio.HttpStatus;
+import one.xio.AsioVisitor;
 
-import javax.xml.bind.DatatypeConverter;
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.ByteBuffer;
-import java.nio.channels.AsynchronousChannelGroup;
-import java.nio.channels.AsynchronousServerSocketChannel;
-import java.nio.channels.AsynchronousSocketChannel;
-import java.nio.channels.CompletionHandler;
-import java.nio.charset.StandardCharsets;
-import java.util.Map;
-import java.util.TreeMap;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executors;
+import java.nio.channels.*;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.Queue;
+import java.util.Set;
+import java.util.concurrent.*;
 
 import static java.lang.StrictMath.min;
-import static one.xio.HttpHeaders.*;
 
 /**
  * ws-only http server
@@ -200,8 +189,13 @@ import static one.xio.HttpHeaders.*;
 public class Server implements Closeable {
     final static boolean $DBG = "true".equals(Config.get("KOUCH_DEBUG", "false"));
     private static final Integer KOUCH_BACKLOG = Integer.valueOf(Config.get("KOUCH_BACKLOG", "16"));
+    private static final Queue<Object[]> q = new ConcurrentLinkedQueue<>();
+    public static final ExecutorService EXECUTOR_SERVICE = Executors.newCachedThreadPool();
     public static Object waitObject = new Object();
+    public static Thread selectorThread;
+    public static boolean killswitch;
     static URI WS_URI;
+
     static {
         try {
             WS_URI = new URI(Config.get("KOUCH_WS_URI", "ws://localhost:1984/_connect"));
@@ -210,319 +204,7 @@ public class Server implements Closeable {
         }
     }
 
-
-
-    static int port = WS_URI.getPort();
-    static String host = WS_URI.getHost();
-
-    public Server(AsynchronousServerSocketChannel asynchronousServerSocketChannel) {
-    {
-
-            asynchronousServerSocketChannel.accept(null, new CompletionHandler<AsynchronousSocketChannel, Object>() {
-                private Rfc822HeaderState rfc822HeaderState;
-                ByteBuffer cursor = ByteBuffer.allocateDirect(1 << 10);
-                public Rfc822HeaderState.HttpRequest httpRequest;
-
-
-                @Override
-                public void completed(AsynchronousSocketChannel socketChannel, Object attachment) {
-                    System.err.println("accept");
-                    rfc822HeaderState = new Rfc822HeaderState();
-                    httpRequest = (Rfc822HeaderState.HttpRequest) rfc822HeaderState.$req().headerInterest(
-                            Connection,
-                            Host,
-                            Origin,
-                            Sec$2dWebSocket$2dKey,
-                            Sec$2dWebSocket$2dProtocol,
-                            Sec$2dWebSocket$2dVersion,
-                            Upgrade
-                    );
-
-
-                    try {
-                        ByteBuffer buf = ByteBuffer.allocate(4 << 10);
-                        while (true) {
-                            Integer integer = socketChannel.read(buf).get();
-                            if (-1 == integer) {
-                                return;
-                            }
-                            ByteBuffer tmp = (ByteBuffer) buf.duplicate().flip();
-                            if (httpRequest.apply(tmp)) {
-                                cursor = ByteBuffer.allocateDirect(tmp.capacity() << 1).put((ByteBuffer) buf.flip().position(tmp.position()));
-                                break;
-                            }
-
-
-                        }
-                        ByteBuffer responseBuf = parseInitiatorRequest(httpRequest);
-
-                        while (responseBuf.hasRemaining())
-                            socketChannel.write(responseBuf).get();
-
-
-                    } catch (InterruptedException | ExecutionException | URISyntaxException e) {
-                        e.printStackTrace();
-
-                    }
-                    try {
-                        while (socketChannel.isOpen())
-                            eventLoop(socketChannel);
-                    } catch (Exception e) {
-
-                    } finally {
-                    }
-
-
-                }
-
-                private void eventLoop(AsynchronousSocketChannel socketChannel) {
-                    WebSocketFrame webSocketFrame = new WebSocketFrame();
-
-                    boolean success = false;
-                    try {
-                        ByteBuffer hdr = null;
-                        while (true) {
-                            if (!(cursor.hasRemaining() && !(success = webSocketFrame.apply(hdr = (ByteBuffer) cursor.duplicate().flip()))))
-                                break;
-                            if (-1 == socketChannel.read(cursor).get()) {
-                                try {
-                                    socketChannel.close();
-                                } catch (IOException e) {
-                                    e.printStackTrace();
-                                }
-                                return;
-                            }
-                        }
-                        if (!success) return;
-                        ByteBuffer byteBuffer = ByteBuffer.allocateDirect((int) webSocketFrame.payloadLength);
-                        byteBuffer.put((ByteBuffer) hdr.limit(cursor.position()));
-                        cursor = byteBuffer;
-                        while (cursor.hasRemaining())
-                            if (-1 == socketChannel.read(cursor).get()) try {
-                                socketChannel.close();return
-                                        ;
-                            } catch (IOException e) {
-                                e.printStackTrace();
-                            }
-
-                        if (webSocketFrame.isMasked) webSocketFrame.applyMask((ByteBuffer) cursor.rewind());
-
-                        switch (webSocketFrame.opcode) {
-                            case continuation:
-                                break;
-                            case text:
-                                //echo server
-                                System.err.println("payload: " + StandardCharsets.UTF_8.decode((ByteBuffer) cursor.rewind()));
-
-                                WebSocketFrame webSocketFrame1 = new WebSocketFrameBuilder().setOpcode(WebSocketFrame.OpCode.text).createWebSocketFrame();
-                                ByteBuffer as = webSocketFrame1.as((ByteBuffer) cursor.rewind());
-
-                                while (as.hasRemaining()) socketChannel.write((ByteBuffer) as.rewind()).get();
-                                cursor.rewind();
-                                while (cursor.hasRemaining()) socketChannel.write(cursor).get();
-                                break;
-                            case binary:
-                                break;
-                            case reservedDataFrame3:
-                                break;
-                            case reservedDataFrame4:
-                                break;
-                            case reservedDataFrame5:
-                                break;
-                            case reservedDataFrame6:
-                                break;
-                            case reservedDataFrame7:
-                                break;
-                            case close:
-                                break;
-                            case ping:
-                                break;
-                            case pong:
-                                break;
-                        }
-                    } catch (InterruptedException | ExecutionException e) {
-                    }
-
-                }
-
-                @Override
-                public void failed(Throwable exc, Object attachment) {
-                    //no longer need $DBG!
-                    exc.printStackTrace();
-                }
-            });
-
-
-
-        }
-    }
-
-    /**
-     * <ul>
-     * assumes:
-     * <li>cursor is an unfinished ByteBuffer</li>
-     * <li> exists with all the state needed from surrounding enclosures.
-     * </ul>
-     * <p>
-     * <pre>
-     *
-     * 2.   The method of the request MUST be GET,
-     * For example, if the WebSocket URI is "ws://example.com/chat",
-     * the first line sent should be "GET /chat HTTP/1.1".
-     *
-     * @param httpRequest
-     */
-    ByteBuffer parseInitiatorRequest(Rfc822HeaderState.HttpRequest httpRequest) throws URISyntaxException {
-
-        HttpMethod httpMethod = httpRequest.method();
-        switch (httpMethod) {
-            case GET:
-                String protocol = httpRequest.protocol();
-                                                /*  and the HTTP version MUST
-                                                * be at least 1.1.
-                                                **/
-                if (!Rfc822HeaderState.HTTP_1_1.equals(protocol))
-                    break;
-                if (6 > httpRequest.headerStrings().size())
-                    break;
-
-                //6 MUST be present.
-                                                /* 3.   The "Request-URI" part of the request MUST match the /resource
-                                                        * name/ defined in Section 3 (a relative URI) or be an absolute
-                                                * http/https URI that, when parsed, has a /resource name/, /host/,
-                                                * and /port/ that match the corresponding ws/wss URI.
-                                                */   /* 4.   The request MUST contain a |Host| header field whose value
-                                                        * contains /host/ plus optionally ":" followed by /port/ (when not
-                                                        * using the default port).
-
-                                                    */
-                String rhost = httpRequest.headerString(Host);
-                String path = httpRequest.path();
-                if (null == rhost || rhost.isEmpty() || !(rhost.startsWith(host) &&
-                        path.startsWith(WS_URI.getPath())))
-                    break;
-
-                                                /* 5.   The request MUST contain an |Upgrade| header field whose value
-                                                            * MUST include the "websocket" keyword.
-                                                    */
-                if (!httpRequest.headerString(Upgrade).contains("websocket"))
-                    break;
-                                                    /* 6.   The request MUST contain a |Connection| header field whose value
-                                                            * MUST include the "Upgrade" token.
-                                                            *
-                                                    */
-                if (!httpRequest.headerString(Connection).contains("Upgrade"))
-                    break;
-
-                                                /* 7.   The request MUST include a header field with the name
-                                                    * |Sec-WebSocket-Key|.  The value of this header field MUST be a
-                                                            * nonce consisting of a randomly selected 16-byte value that has
-                                                    * been base64-encoded (see Section 4 of [RFC4648]).  The nonce
-                                                            * MUST be selected randomly for each connection.
-                                                    *
-                                                    * NOTE: As an example, if the randomly selected value was the
-                                                    * sequence of bytes 0x01 0x02 0x03 0x04 0x05 0x06 0x07 0x08 0x09
-                                                            * 0x0a 0x0b 0x0c 0x0d 0x0e 0x0f 0x10, the value of the header
-                                                    * field would be "AQIDBAUGBwgJCgsMDQ4PEC=="
-                                                */
-                String wsKeyBase64 = httpRequest.headerString(Sec$2dWebSocket$2dKey);
-                byte[] wsKey = DatatypeConverter.parseBase64Binary(wsKeyBase64);
-                if (wsKey.length != 16) break;
-                                                 /*            *
-                                                    * 8.   The request MUST include a header field with the name |Origin|
-                                                    * [RFC6454] if the request is coming from a browser client.  If
-                                                            * the connection is from a non-browser client, the request MAY
-                                                    * include this header field if the semantics of that client match
-                                                    * the use-case described here for browser clients.  The value of
-                                                        * this header field is the ASCII serialization of origin of the
-                                                    * context in which the code establishing the connection is
-                                                            * running.  See [RFC6454] for the details of how this header field
-                                                    * value is constructed.
-                                                            *
-                                                    * As an example, if code downloaded from www.example.com attempts
-                                                    * to establish a connection to ww2.example.com, the value of the
-                                                            * header field would be "http://www.example.com".
-                                                            */
-
-                                                    /* 9.   The request MUST include a header field with the name
-                                                    * |Sec-WebSocket-Version|.  The value of this header field MUST be
-                                                    * 13.
-                                                            *
-                                                    * NOTE: Although draft versions of this document (-09, -10, -11,
-                                                            * and -12) were posted (they were mostly comprised of editorial
-                                                            * changes and clarifications and not changes to the wire
-                                                    * protocol), values 9, 10, 11, and 12 were not used as valid
-                                                            * values for Sec-WebSocket-Version.  These values were reserved in
-                                                    * the IANA registry but were not and will not be used.
-                                                            */
-                if (13 != Integer.valueOf(httpRequest.headerString(Sec$2dWebSocket$2dVersion)))
-                    break;
-                Rfc822HeaderState.HttpResponse httpResponse = new Rfc822HeaderState().$res();
-                Map<String, String> headerStrings = new TreeMap<>();
-                                                /* 4.  If the response lacks a |Sec-WebSocket-Accept| header field or
-                                                * the |Sec-WebSocket-Accept| contains a value other than the
-                                                * base64-encoded SHA-1 of the concatenation of the |Sec-WebSocket-
-                                                * Key| (as a string, not base64-decoded) with the string "258EAFA5-E914-47DA-95CA-C5AB0DC85B11" but ignoring any leading and
-                                                * trailing whitespace, the client MUST _Fail the WebSocket
-                                                * Connection_.
-                                                *
-                                                *        /key/
-                                                The |Sec-WebSocket-Key| header field in the client's handshake
-                                                includes a base64-encoded value that, if decoded, is 16 bytes
-                                                in length.  This (encoded) value is used in the creation of
-                                                the server's handshake to indicate an acceptance of the
-                                                connection.  It is not necessary for the server to base64-
-                                                decode the |Sec-WebSocket-Key| value.
-                                                */
-
-                HashCode hashCode = Hashing.sha1().hashString(wsKeyBase64 + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11", StandardCharsets.UTF_8);
-                headerStrings.put(Sec$2dWebSocket$2dAccept.getHeader(), BaseEncoding.base64().encode(hashCode.asBytes()));
-                headerStrings.put(Sec$2dWebSocket$2dProtocol.getHeader(), "kvdb");
-                headerStrings.put(Upgrade.getHeader(), "websocket");
-                headerStrings.put(Connection.getHeader(), "Upgrade");
-                ByteBuffer response1 = httpResponse
-                        .resCode(HttpStatus.$101)
-                        .status(HttpStatus.$101)
-                        .headerStrings(headerStrings)
-                        .as(ByteBuffer.class);
-                System.err.println("sending back: " + httpResponse.as(String.class));
-                return response1;
-            case POST:
-                break;
-            case PUT:
-                break;
-            case HEAD:
-                break;
-            case DELETE:
-                break;
-            case TRACE:
-                break;
-            case CONNECT:
-                break;
-            case OPTIONS:
-                break;
-            case HELP:
-                break;
-            case VERSION:
-                break;
-        }
-
-        return null;
-    }
-
-    public static void main(String[] args) throws IOException {
-        AsynchronousChannelGroup group = AsynchronousChannelGroup.withCachedThreadPool(Executors.newCachedThreadPool(), KOUCH_BACKLOG);
-        AsynchronousServerSocketChannel open = AsynchronousServerSocketChannel.open(group).bind(new InetSocketAddress(InetAddress.getByName(host), port), KOUCH_BACKLOG);
-        kouchdb.Server server = new kouchdb.Server(open );
-
-        synchronized (waitObject) {
-            try {
-                waitObject.wait();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-    }
+    public static Selector selector;
 
     public static String wheresWaldo(int... depth) {
         int d = depth.length > 0 ? depth[0] : 2;
@@ -541,9 +223,196 @@ public class Server implements Closeable {
         return ret;
     }
 
+    public static Selector getSelector() {
+        return selector;
+    }
+
+    public static void setSelector(Selector selector) {
+        kouchdb.Server.selector = selector;
+    }
+
+    /**
+     * handles the threadlocal ugliness if any to registering user threads into the selector/reactor pattern
+     *
+     * @param channel the socketchanel
+     * @param op      int ChannelSelector.operator
+     * @param s       the payload: grammar {enum,data1,data..n}
+     */
+    public static void enqueue(SelectableChannel channel, int op, Object... s) {
+        assert channel != null && !killswitch : "Server appears to have shut down, cannot enqueue";
+        if (Thread.currentThread() == selectorThread)
+            try {
+                channel.register(getSelector(), op, s);
+            } catch (ClosedChannelException e) {
+                e.printStackTrace();
+            }
+        else {
+            q.add(new Object[]{channel, op, s});
+        }
+        Selector selector1 = getSelector();
+        if (null != selector1)
+            selector1.wakeup();
+    }
+
+    public static void init(AsioVisitor protocoldecoder, String... a) throws IOException {
+        setSelector(Selector.open());
+        selectorThread = Thread.currentThread();
+
+        synchronized (a) {
+            long timeoutMax = 1024, timeout = 1;
+
+            while (!killswitch) {
+                while (!q.isEmpty()) {
+                    Object[] s = q.remove();
+                    SelectableChannel x = (SelectableChannel) s[0];
+                    Selector sel = getSelector();
+                    Integer op = (Integer) s[1];
+                    Object att = s[2];
+                    //          System.err.println("" + op + "/" + String.valueOf(att));
+                    try {
+                        x.configureBlocking(false);
+                        SelectionKey register = x.register(sel, op, att);
+                        assert null != register;
+                    } catch (Throwable e) {
+                        e.printStackTrace();
+                    }
+                }
+                int select = selector.select(timeout);
+
+                timeout = 0 == select ? min(timeout << 1, timeoutMax) : 1;
+                if (0 != select)
+                    innerloop(protocoldecoder);
+            }
+        }
+    }
+
+    private static void innerloop(AsioVisitor protocoldecoder) throws IOException {
+        Set<SelectionKey> keys = selector.selectedKeys();
+
+        for (Iterator<SelectionKey> i = keys.iterator(); i.hasNext(); ) {
+            SelectionKey key = i.next();
+            i.remove();
+
+            if (key.isValid()) {
+                SelectableChannel channel = key.channel();
+                try {
+                    AsioVisitor m = inferAsioVisitor(protocoldecoder, key);
+
+                    if (key.isValid() && key.isWritable()) {
+                        if (((SocketChannel) channel).socket().isOutputShutdown()) {
+                            key.cancel();
+                        } else {
+                            m.onWrite(key);
+                        }
+                    }
+                    if (key.isValid() && key.isReadable()) {
+                        if (((SocketChannel) channel).socket().isInputShutdown()) {
+                            key.cancel();
+                        } else {
+                            m.onRead(key);
+                        }
+                    }
+                    if (key.isValid() && key.isAcceptable()) {
+                        m.onAccept(key);
+                    }
+                    if (key.isValid() && key.isConnectable()) {
+                        m.onConnect(key);
+                    }
+                } catch (Throwable e) {
+                    Object attachment = key.attachment();
+                    if (attachment instanceof Object[]) {
+                        Object[] objects = (Object[]) attachment;
+                        System.err.println("BadHandler: " + Arrays.deepToString(objects));
+
+                    } else
+                        System.err.println("BadHandler: " + String.valueOf(attachment));
+
+                    if (AsioVisitor.$DBG) {
+                        AsioVisitor asioVisitor = inferAsioVisitor(protocoldecoder, key);
+                        if (asioVisitor instanceof AsioVisitor.Impl) {
+                            AsioVisitor.Impl visitor = (AsioVisitor.Impl) asioVisitor;
+                            if (AsioVisitor.$origins.containsKey(visitor)) {
+                                String s = AsioVisitor.$origins.get(visitor);
+                                System.err.println("origin" + s);
+                            }
+                        }
+                    }
+                    e.printStackTrace();
+                    key.attach(null);
+                    channel.close();
+                }
+            }
+        }
+    }
+
+    static AsioVisitor inferAsioVisitor(AsioVisitor default$, SelectionKey key) {
+        Object attachment = key.attachment();
+        AsioVisitor m;
+        if (null == attachment)
+            m = default$;
+        if (attachment instanceof Object[])
+            for (Object o : ((Object[]) attachment)) {
+            attachment = o;
+            break;
+        }
+        if (attachment instanceof Iterable) {
+            Iterable iterable = (Iterable) attachment;
+            for (Object o : iterable) {
+                attachment = o;
+                break;
+            }
+        }
+        m = attachment instanceof AsioVisitor ? (AsioVisitor) attachment : default$;
+        return m;
+    }
+
+    public static void setKillswitch(boolean killswitch) {
+        kouchdb.Server.killswitch = killswitch;
+    }
+
     @Override
     public void close() throws IOException {
 
     }
 
+    public static void main(String[] args) throws InterruptedException {
+        System.setProperty("REALTIME_UNIT", TimeUnit.MINUTES.name());
+
+        Future<?> submit = EXECUTOR_SERVICE.submit(() -> {
+            try {
+                ServerSocketChannel channel = ServerSocketChannel.open().bind(new InetSocketAddress(InetAddress.getByName(Config.get("KOUCHDB_BIND", "0.0.0.0")), Integer.parseInt(Config.get("KOUCHDB_PORT", "1984"))));
+                channel.configureBlocking(false);
+                enqueue(channel, SelectionKey.OP_ACCEPT);
+                init(new AsioVisitor() {
+                    @Override
+                    public void onRead(SelectionKey key) throws Exception {
+
+                    }
+
+                    @Override
+                    public void onConnect(SelectionKey key) throws Exception {
+
+                    }
+
+                    @Override
+                    public void onWrite(SelectionKey key) throws Exception {
+
+                    }
+
+                    @Override
+                    public void onAccept(SelectionKey key) throws Exception {
+
+                    }
+                });
+            } catch (Exception ignored) {
+            }
+        });
+
+
+        Object o = new Object();
+        synchronized (o) {
+            o.wait();
+        }
+    }
+   public  static int getReceiveBufferSize(){return 4<<10;}
 }
