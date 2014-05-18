@@ -27,8 +27,8 @@ import static one.xio.HttpHeaders.*;
  * User: jim
  * Date: 6/4/12
  * Time: 1:42 AM
- */
-public class ContentRootImpl extends Impl implements PreRead {
+ */@PreRead
+public class ContentRootImpl extends Impl   {
 
   public static final String SLASHDOTSLASH = File.separator + "." + File.separator;
   public static final String DOUBLESEP = File.separator + File.separator;

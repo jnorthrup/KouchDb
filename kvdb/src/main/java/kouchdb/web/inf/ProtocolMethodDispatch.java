@@ -1,12 +1,12 @@
 package kouchdb.web.inf;
 
-import kouchdb.PreRead;
 import kouchdb.Server;
 import kouchdb.util.Rfc822HeaderState;
 import one.xio.AsioVisitor.Impl;
 import one.xio.HttpMethod;
 
 import java.io.IOException;
+import java.lang.annotation.Annotation;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
@@ -122,7 +122,7 @@ public class ProtocolMethodDispatch extends Impl {
         impl = value.newInstance();
         Object a[] = {impl, httpRequest, cursor};
         key.attach(a);
-        if (PreRead.class.isAssignableFrom(value)) impl.onRead(key);
+        if ( (value.getClass().isAnnotationPresent(PreRead.class))) impl.onRead(key);
         key.selector().wakeup();
         return;
       }
@@ -135,5 +135,6 @@ public class ProtocolMethodDispatch extends Impl {
     public static <T> String deepToString(T... d) {
         return Arrays.deepToString(d) + wheresWaldo();
     }
+
 
 }
