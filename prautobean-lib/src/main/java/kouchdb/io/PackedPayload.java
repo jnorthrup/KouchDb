@@ -304,5 +304,8 @@ public class PackedPayload<ProtoMessage> {
             out.putInt(fixupIndex, i);
         }
     }
+    public static final <T> PackedPayload<T> create(Class<T>x){
+        return codeSmell.computeIfAbsent(x,PackedPayload::new);
+    }
 }
     

@@ -61,7 +61,7 @@ public class PrautoGen
              PrintWriter pw = new PrintWriter(bufferedWriter)
         ) {
             pw.println("package " + javaPackageName + ";\n\nimport kouchdb.ann.*;\n\n\n@ProtoOrigin(" + '"' + v.message.getFullName() + '"' + ")\n" +
-                    "interface " + cname + "{");
+                    "public interface " + cname + "{");
             Map<String, List<Field>> f = v.stripes;
             AtomicInteger bits = new AtomicInteger(0);
             //package up the primitives first
@@ -70,7 +70,7 @@ public class PrautoGen
 
                 List<Field> fields = f.get(o);
                 if (null != fields)
-                    print(bits, o, fields, ((PrintWriter) pw));
+                    print(bits, o, fields, pw);
             });
             f.entrySet().stream().filter(o -> !StripeLeveler.inFirst.contains(o.getKey())).forEachOrdered(o -> print(bits, o.getKey(), o.getValue(), ((PrintWriter) pw)));
 
@@ -102,7 +102,7 @@ public class PrautoGen
         try (BufferedWriter bufferedWriter = Files.newBufferedWriter(path); PrintWriter pw = new PrintWriter(bufferedWriter)) {
 
             pw.println("package " + javaPackageName + ";\n\nimport kouchdb.ann.*;\n\n\n@ProtoOrigin(" + '"' + v. getFullName() + '"' + ")\n" +
-                    "enum " + k + "{");
+                    "public enum " + k + "{");
             StringJoiner stringJoiner = new StringJoiner(",");
             v.getValues().stream().map(EnumGroup.Value::getName).forEachOrdered(stringJoiner::add);
             pw.println(stringJoiner.toString());

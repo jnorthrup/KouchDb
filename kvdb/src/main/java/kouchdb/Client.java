@@ -2,9 +2,11 @@ package kouchdb;
 
 import com.google.common.hash.Hashing;
 import com.google.common.io.BaseEncoding;
-import kouchdb.util.Rfc822HeaderState;
-import one.xio.HttpMethod;
+ import one.xio.HttpMethod;
 import one.xio.HttpStatus;
+import rxf.core.Rfc822HeaderState;
+import rxf.core.WebSocketFrame;
+import rxf.core.WebSocketFrameBuilder;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -62,7 +64,7 @@ public class Client {
             String hello = "hello";
             byte[] bytes = hello.getBytes();
             ByteBuffer wrap = ByteBuffer.wrap(bytes);
-            ByteBuffer webSocketFrame = new WebSocketFrameBuilder()
+            ByteBuffer WebSocketHeader = new WebSocketFrameBuilder()
                     .setIsMasked(true)
                     .setOpcode(WebSocketFrame.OpCode.text)
                     .createWebSocketFrame().as(wrap);

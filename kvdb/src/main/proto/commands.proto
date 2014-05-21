@@ -753,8 +753,20 @@ option java_outer_classname = "SchemaCommands";
      * }
      */
     message DbInfo {
+      message DbInfoResponse{
+      required bool compactRunning=1;
+      required string dbName =2;
+      required string diskFormat_version =3;
+      required int64 diskSize=4;
+      required int64 docCount=5;
+      required int64 docDel_count=6;
+      required int64 instanceStart_time=7;
+      required int64 purgeSeq=8;
+      required int64 updateSeq=9;
+      }
         required string db = 1;
-    }
+
+  }
 
     /**
      * Compact the database
@@ -857,3 +869,4 @@ message WsFrame {
     optional RevisionDiff RevisionDiff = 101600;
     optional Events Events = 101700;
 }
+

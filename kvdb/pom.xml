@@ -10,19 +10,14 @@
     </parent>
     <artifactId>kvdb</artifactId>
     <version>1.0-SNAPSHOT</version>
-    <name>kvdb</name>
+    <name>initResponse</name>
     <url>http://maven.apache.org</url>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <protostuff.version>1.0.8</protostuff.version>
     </properties>
     <dependencies>
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>3.8.1</version>
-            <scope>test</scope>
-        </dependency>
+
         <dependency>
             <groupId>javolution</groupId>
             <artifactId>javolution</artifactId>
@@ -55,6 +50,11 @@
             <version>4.11</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>rxf</groupId>
+            <artifactId>rxf-core</artifactId>
+            <version>0.9.9.0</version>
+        </dependency>
     </dependencies>
 
     <build>
@@ -83,7 +83,6 @@
                     </execution>
                 </executions>
             </plugin>
-
         </plugins>
     </build>
 
