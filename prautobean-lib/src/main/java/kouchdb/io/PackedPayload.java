@@ -8,6 +8,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Proxy;
+import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -49,15 +50,13 @@ public class PackedPayload<ProtoMessage> {
         put(float.class, (byteBuffer, o) -> byteBuffer.putFloat((float) o));
         put(short.class, (byteBuffer, o) -> byteBuffer.putShort((short) o));
         put(byte.class, (byteBuffer, o) -> byteBuffer.put((byte) o));
-        put(byte[].class, (byteBuffer, o) -> {
-            byte[] o1 = (byte[]) o;
-            byteBuffer.putInt(o1.length);
-            byteBuffer.put(o1);
-        });
+
         put(String.class, (byteBuffer, o) -> {
             byte[] o1 = o.toString().getBytes(UTF_8);
-            byteBuffer.putInt(o1.length);
+            int begin = byteBuffer.position();
+            byteBuffer.position(begin + 5);
             byteBuffer.put(o1);
+            writeSize(byteBuffer, begin, o1.length);
         });
         put(boolean.class, (byteBuffer, o) -> byteBuffer.put((byte) ((boolean) o ? 1 : 0)));
     }};
@@ -73,19 +72,15 @@ public class PackedPayload<ProtoMessage> {
             put(float.class, ByteBuffer::getFloat);
             put(short.class, ByteBuffer::getShort);
             put(byte.class, ByteBuffer::get);
-            put(byte[].class, byteBuffer -> {
-                int anInt = byteBuffer.getInt();
-                byte[] bytes = new byte[anInt];
-                byteBuffer.get(bytes);
-                return bytes;
-            });
+
+
             put(String.class, byteBuffer -> {
                 int anInt = byteBuffer.getInt();
                 byte[] bytes = new byte[anInt];
                 byteBuffer.get(bytes);
                 return new String(bytes, UTF_8);
             });
-            put(boolean.class, byteBuffer -> byteBuffer.get() > 0);
+            put(boolean.class, byteBuffer -> 0 < byteBuffer.get());
         }
     };
     public static final Comparator<Method> METHOD_COMPARATOR = (o1, o2) -> o1.getAnnotation(ProtoNumber.class).value() - o2.getAnnotation(ProtoNumber.class).value();
@@ -115,8 +110,8 @@ public class PackedPayload<ProtoMessage> {
 
     /**
      * this initializes the invariants that hold a serialized message.
-     * <p>
-     * <p>
+     * <p/>
+     * <p/>
      * [---len---][---bitset[-bools-][-optbools-]][---nonopt---][---opt---]
      *
      * @param theAutoBeanClass an-autobean like generated protobuf proxy interface
@@ -125,7 +120,7 @@ public class PackedPayload<ProtoMessage> {
         AtomicInteger nc = new AtomicInteger(0);
         asList(theAutoBeanClass.getDeclaredMethods()).forEach(method -> {
             if (method.isAnnotationPresent(ProtoNumber.class)) {
-                Collection<Method> l = method.getReturnType() == boolean.class || method.getReturnType() == Boolean.class ? bool : method.isAnnotationPresent(Optional.class) ? opt : nonOpt;
+                Collection<Method> l = boolean.class == method.getReturnType() || Boolean.class == method.getReturnType() ? bool : method.isAnnotationPresent(Optional.class) ? opt : nonOpt;
                 l.add(method);
             }
         });
@@ -137,25 +132,25 @@ public class PackedPayload<ProtoMessage> {
         init(theAutoBeanClass);
     }
 
-    private static void skim(ByteBuffer in, Map<Method, Object> values, Map<Method, Object> offsets, Method method) {
+    private static void skim(ByteBuffer in, Map<Method, Object> values, Map<Method, Object> offsets, Method method, int position) {
         Class<?> returnType = method.getReturnType();
         if (VIEWGETTER.containsKey(returnType)) {
             values.put(method, VIEWGETTER.get(returnType).apply(in));
         } else if (returnType.isEnum()) {
             values.put(method, returnType.getEnumConstants()[in.getShort()]);
         } else {
-            offsets.put(method, in.position());
-            int anInt = in.getInt();
-            in.position(in.position() + anInt);
+            offsets.put(method, position);
+            int anInt = readSize(in);
+            in.position(position + anInt);
         }
     }
 
     private void init(Class theAutoBean) {
-        codeSmell.put(theAutoBean, this);
+        codeSmell.putIfAbsent(theAutoBean, this);
     }
 
-    public ProtoMessage get(Class c, ByteBuffer in) {
-        int fixup = in.getInt();
+    public <C extends Class<ProtoMessage>> ProtoMessage get(C c, ByteBuffer in) {
+        long size = readSize(in);
         byte[] bytes = new byte[bitsetBytes];
         in.get(bytes);
         BitSet bitSet = BitSet.valueOf(bytes);
@@ -166,12 +161,13 @@ public class PackedPayload<ProtoMessage> {
         AtomicInteger c1 = new AtomicInteger(0);
         bool.forEach(method -> values.put(method, bitSet.get(c1.getAndIncrement())));
 
-        nonOpt.forEach(method -> skim(in, values, offsets, method));
+        nonOpt.forEach(method -> skim(in, values, offsets, method, in.position()));
         //handle opt
         c1.set(0);
 
         opt.forEach(method -> {
-            if (bitSet.get(bool.size() + c1.getAndIncrement())) skim(in, values, offsets, method);
+            if (bitSet.get(bool.size() + c1.getAndIncrement()))
+                skim(in, values, offsets, method, in.position());
             else
                 values.put(method, null);
         });
@@ -179,8 +175,8 @@ public class PackedPayload<ProtoMessage> {
         return (ProtoMessage) Proxy.newProxyInstance(c.getClassLoader(), new Class[]{c}, (proxy, method, args) ->
                 values.computeIfAbsent(method, k -> offsets.computeIfPresent(k, (k1, v) -> {
                     in.position((Integer) v);
-                    int len = in.getInt();
-                    final int fin = in.position() + len;
+                    int size1 = readSize(in);
+                    int fin = in.position() + size1;
 
                     Class returnType = method.getReturnType();
                     Object r = null;
@@ -193,36 +189,36 @@ public class PackedPayload<ProtoMessage> {
                         System.err.println("");
 
                         if (VIEWSIZES.containsKey(aClass)) {
-                            r = new ReadOnlyBBList(aClass, VIEWSIZES.get(aClass), (ByteBuffer) in.slice().limit(len));
+                            r = new ReadOnlyBBList(aClass, VIEWSIZES.get(aClass), (ByteBuffer) in.slice().limit(size1));
                             in.position(fin);
-                        }
-                        else {
+                        } else {
                             List<Object> objects = new ArrayList<>();
                             r = objects;
                             if (aClass.isEnum())
-                                while (in.position()<fin)
+                                while (in.position() < fin)
                                     objects.add(aClass.getEnumConstants()[in.getShort()]);
                             else {
                                 PackedPayload packedPayload = codeSmell.computeIfAbsent(aClass, PackedPayload::new);
-                                while (in.position()<fin) {
+                                while (in.position() < fin) {
                                     Object o = packedPayload.get(aClass, in);
                                     objects.add(o);
                                 }
                             }
                         }
-
                     }
-                    assert in.position()==fin;
+
                     return r;
                 })));
+
     }
 
+
     public void put(ProtoMessage proto, ByteBuffer out) {
-        int fixupIndex = out.position();
-        int fixup=out.position();
-        out.putInt(-1);
+        int begin = out.position();
+        out.position(begin + 5);
+        int fixup = out.position();
         BitSet bitSet = new BitSet(bitsetLen);
-        bitSet.set(bitsetLen - 1);
+        if (0 < bitsetLen) bitSet.set(bitsetLen - 1);
         AtomicInteger c = new AtomicInteger(0);
         bool.forEach(method -> {
             try {
@@ -256,11 +252,9 @@ public class PackedPayload<ProtoMessage> {
             }
 
         });
-        int i = out.position() - fixup;
-        byte[] src1 = bitSet.toByteArray();
-        ((ByteBuffer) out.duplicate().position(fixupIndex)).putInt(i).put(src1);
+        long size = out.position() - fixup;
 
-
+        writeSize(out, begin, size);out.put(src);
     }
 
     private void writeElement(ByteBuffer out, Object value, Method method, Class forcedClaz) {
@@ -284,9 +278,9 @@ public class PackedPayload<ProtoMessage> {
             packedPayload.put(value, out);
 
         } else if (returnType.isAssignableFrom(List.class)) {
-            int fixupIndex = out.position();
-            out.putInt(-1);
-            int fixup=out.position();
+            int begin = out.position();
+            out.position(begin + 5);
+            int content = out.position();
             Class genericReturnType = (Class) ((ParameterizedType) method.getGenericReturnType()).getActualTypeArguments()[0];
 
             List list = (List) value;
@@ -300,12 +294,49 @@ public class PackedPayload<ProtoMessage> {
             });
             else if (genericReturnType.isAnnotationPresent(ProtoOrigin.class))
                 list.forEach(o -> writeElement(out, o, null, genericReturnType));
-            int i = out.position() - fixup;
-            out.putInt(fixupIndex, i);
+
+            writeSize(out, begin, out.position() - content);
         }
     }
-    public static final <T> PackedPayload<T> create(Class<T>x){
-        return codeSmell.computeIfAbsent(x,PackedPayload::new);
+
+
+    public static final <T, C extends Class<T>> PackedPayload<T> create(C c) {
+        return codeSmell.computeIfAbsent(c, PackedPayload::new);
+    }
+
+    /**
+     * given an output bytebuffer with 5 bytes headroom in front:
+     * <p/>
+     * if size is less than 255 we write a byte and move the page in place to have a 1 byte size
+     * <p/>
+     * otherwise we encode 0xff followed by the int32 size.
+     *
+     * @param out   bytebuffer with data starting at begin+5
+     * @param begin the starting mark
+     * @param size  the payload actual size used in the out buf.
+     */
+    public static void writeSize(ByteBuffer out, int begin, long size) {
+        ByteBuffer writeBuf = (ByteBuffer) out.duplicate().position(begin);
+        if (255 > size) {
+            writeBuf.put((byte) (size & 0xff));
+            writeBuf.put((ByteBuffer) out.duplicate().flip().position(begin + 5));
+            out.position(writeBuf.position());
+        } else {
+            writeBuf.put((byte) (255 & 0xff)).putInt((int) (size & 0xffff_ffff));
+        }
+    }
+
+    public static int readSize(ByteBuffer in) {
+        int sanityCheck = in.remaining();
+        long size = in.get() & 0xff;
+        sanityCheck--;
+        if (0xff == size) {
+            size = in.getInt() & 0xffff_ffff;
+            sanityCheck -= 4;
+        }
+        assert sanityCheck >= size;
+
+        return (int) size;
     }
 }
     

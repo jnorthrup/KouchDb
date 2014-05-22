@@ -10,18 +10,16 @@
     </parent>
     <artifactId>kvdb</artifactId>
     <version>1.0-SNAPSHOT</version>
-    <name>initResponse</name>
-    <url>http://maven.apache.org</url>
+     <url>http://maven.apache.org</url>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <protostuff.version>1.0.8</protostuff.version>
     </properties>
     <dependencies>
-
         <dependency>
-            <groupId>javolution</groupId>
+            <groupId>org.javolution</groupId>
             <artifactId>javolution</artifactId>
-            <version>5.5.1</version>
+            <version>5.3.1</version>
         </dependency>
         <dependency>
             <groupId>com.google.code.gson</groupId>
@@ -38,10 +36,9 @@
             <artifactId>requestfactory-server</artifactId>
             <version>2.6.0</version>
         </dependency>
-
         <dependency>
             <groupId>${project.groupId}</groupId>
-            <artifactId>prautobean-lib</artifactId>
+            <artifactId>kvdb-proto</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
@@ -67,21 +64,6 @@
                     <source>1.8</source>
                     <target>1.8</target>
                 </configuration>
-            </plugin>
-            <plugin>
-                <groupId>${project.groupId}</groupId>
-                <artifactId>prautobean-maven-plugin</artifactId>
-                <version>0.0.0.1</version>
-
-                <executions>
-                    <execution>
-                        <id>generate-sources</id>
-                        <phase>generate-sources</phase>
-                        <goals>
-                            <goal>prautobean</goal>
-                        </goals>
-                    </execution>
-                </executions>
             </plugin>
         </plugins>
     </build>

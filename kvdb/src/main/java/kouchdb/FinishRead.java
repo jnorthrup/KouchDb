@@ -14,6 +14,7 @@ public class FinishRead extends AsioVisitor.Impl{
         this.cursor = cursor;
 
      this.success = success;
+     if(!cursor.hasRemaining())success.run();
  }
 
 

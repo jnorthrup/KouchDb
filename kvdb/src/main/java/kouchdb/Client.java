@@ -2,13 +2,20 @@ package kouchdb;
 
 import com.google.common.hash.Hashing;
 import com.google.common.io.BaseEncoding;
- import one.xio.HttpMethod;
+import kouchdb.command.*;
+import kouchdb.command.DbInfo;
+import kouchdb.command.DbInfoResponse;
+import kouchdb.command.WsFrame;
+import kouchdb.io.PackedPayload;
+import one.xio.HttpMethod;
 import one.xio.HttpStatus;
 import rxf.core.Rfc822HeaderState;
 import rxf.core.WebSocketFrame;
 import rxf.core.WebSocketFrameBuilder;
 
 import java.io.IOException;
+import java.lang.Override;
+import java.lang.String;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousSocketChannel;
@@ -27,8 +34,9 @@ public class Client {
 
     public static void main(String[] args) throws IOException, ExecutionException, InterruptedException {
 
-        AsynchronousSocketChannel asynchronousSocketChannel = AsynchronousSocketChannel.open();
 
+
+        AsynchronousSocketChannel asynchronousSocketChannel = AsynchronousSocketChannel.open();
         asynchronousSocketChannel.connect(new InetSocketAddress("localhost", 1984)).get();
         Rfc822HeaderState rfc822HeaderState = new Rfc822HeaderState();
         byte[] nonce = new byte[16];
@@ -61,23 +69,37 @@ public class Client {
             assert accept.equalsIgnoreCase(httpResponse.headerString(Sec$2dWebSocket$2dAccept));
             System.err.println("");
 
-            String hello = "hello";
-            byte[] bytes = hello.getBytes();
-            ByteBuffer wrap = ByteBuffer.wrap(bytes);
-            ByteBuffer WebSocketHeader = new WebSocketFrameBuilder()
-                    .setIsMasked(true)
-                    .setOpcode(WebSocketFrame.OpCode.text)
-                    .createWebSocketFrame().as(wrap);
+            PackedPayload<WsFrame> wsFramePackedPayload = PackedPayload.create(WsFrame.class);
 
-
-            Object o = new Object();
-            synchronized (o) {
-                try {
-                    o.wait();
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
+            WsFrame wsFrame = new WsFrame(){
+                @Override
+                public DbInfo getDbInfo() {
+                    return new DbInfo() {
+                        @Override
+                        public String getDb() {
+                            return "test";
+                        }
+                    };
                 }
-            }
+            };
+            ByteBuffer payload = ByteBuffer.allocate(4 << 10);
+            wsFramePackedPayload.put(wsFrame, payload);
+            WebSocketFrame webSocketFrame = new WebSocketFrameBuilder()
+                    .setIsMasked(true)
+                    .setOpcode(WebSocketFrame.OpCode.binary)
+                    .createWebSocketFrame();
+            ByteBuffer header = webSocketFrame.as((ByteBuffer) payload.flip());
+
+
+            asynchronousSocketChannel.write(header).get();
+            asynchronousSocketChannel.write((ByteBuffer) payload.flip()).get();
+
+            asynchronousSocketChannel.read((ByteBuffer) payload.clear()).get();
+            payload.flip();
+            DbInfoResponse dbInfoResponse = PackedPayload.create(DbInfoResponse.class).get(DbInfoResponse.class, payload);
+
+            System.err.println(""+dbInfoResponse.getDbName());
+
         } catch (Throwable e) {
             e.printStackTrace();
         }

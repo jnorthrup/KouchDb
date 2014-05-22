@@ -1,5 +1,6 @@
 package kouchdb.command;
 
+import junit.framework.Assert;
 import kouchdb.io.PackedPayload;
 import org.junit.Test;
 
@@ -98,27 +99,26 @@ public class PackedPayloadTest {
                 return lists;
             }
         };
-        PackedPayload<ComplexPrautoBean> createOptionsClassPackedPayload = new PackedPayload<>(ComplexPrautoBean.class);
+        PackedPayload<ComplexPrautoBean> createOptionsClassPackedPayload =PackedPayload.create(ComplexPrautoBean.class);
         createOptionsClassPackedPayload.put(complexPrautoBean, byteBuffer);
-        Buffer flip = byteBuffer.flip();
+        ByteBuffer flip = (ByteBuffer) byteBuffer.flip();
 
-        System.err.println(StandardCharsets.UTF_8.decode((ByteBuffer) byteBuffer.duplicate()));
+        System.err.println(StandardCharsets.UTF_8.decode(byteBuffer.duplicate()));
 
         ByteBuffer duplicate = (ByteBuffer) byteBuffer.duplicate();
-        duplicate.getInt();//skip an int.
+        PackedPayload.readSize(duplicate);
         byte b = duplicate.get();
         System.err.println(toBinaryString(b & 0xff));
 
-        assert 0b1111111 == (b & 0xff); //bitmap
 
-        ComplexPrautoBean complexPrautoBean1 = createOptionsClassPackedPayload.get(ComplexPrautoBean.class, (ByteBuffer) flip);
+        ComplexPrautoBean complexPrautoBean1 =
+        PackedPayload.create(ComplexPrautoBean.class).get(ComplexPrautoBean.class, (ByteBuffer) flip);
 
         TheEnum theEnum = complexPrautoBean1.getEnumThingy().get(2);
-        assert TheEnum.z == theEnum;
+        org.junit.Assert.assertEquals( TheEnum.z ,theEnum);
         String cache = complexPrautoBean.getCache();
         String cache1 = complexPrautoBean1.getCache();
-
-        assert cache1.equals(cache);
+        org.junit.Assert.assertEquals(cache1, cache);
     }
 
 }

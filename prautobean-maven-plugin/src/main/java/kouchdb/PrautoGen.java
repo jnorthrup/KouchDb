@@ -85,8 +85,10 @@ public class PrautoGen
             String capped = getCaps(field.getName());
             boolean repeated = field.isRepeated();
             boolean optional = field.isOptional();
-            printWriter.println((optional ? "\n\t@Optional(" + bits.incrementAndGet() + ")" : "") + "\n\t@ProtoNumber(" + field.getNumber() + ")\n\t" +
-                    (repeated ? ("java.util.List<" + (type) + ">") : (type)) + "\tget" + capped + "();\n");
+            printWriter.println((optional ? "\n\t@Optional(" + bits.incrementAndGet() + ") default " : "") + "\n\t@ProtoNumber(" + field.getNumber() + ")\n\t" +
+                    (repeated ? ("java.util.List<" + (type) + ">") : (type)) + "\tget" + capped + "()" +(optional ?"{return " +(type=="boolean"?"false":(type=="long"||type=="int")?"0":"null")+
+                    ";}":";")+
+                    "\n");
         });
     }
 

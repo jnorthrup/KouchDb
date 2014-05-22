@@ -20,6 +20,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -37,6 +38,7 @@ public class Kouch {
 
     final private static Integer port = Integer.valueOf(Config.get("PORT", "1984"));
     final private static String host = Config.get("HOST", "localhost");
+    public static final PackedPayload<WsFrame> WS_FRAME_PACKED_PAYLOAD = PackedPayload.create(WsFrame.class);
     static URI ws_uri;
 
     static {
@@ -47,7 +49,6 @@ public class Kouch {
         }
     }
 
-    public static final PackedPayload<WsFrame> WS_FRAME_PACKED_PAYLOAD = new PackedPayload<>(WsFrame.class);
 
     public static void main(String[] args) throws IOException {
         try (ServerSocketChannel serverSocketChannel = ServerSocketChannel.open()) {
@@ -61,7 +62,6 @@ public class Kouch {
                     Server.enqueue(serverSocketChannel, OP_ACCEPT);
                     Server.init(new Impl() {
 
-                        private Rfc822HeaderState.HttpResponse initResponse;
 
                         @Override
                         public void onAccept(SelectionKey key) throws Exception {
@@ -84,7 +84,7 @@ public class Kouch {
                                         boolean apply = req.apply(buf);
                                         if (apply) {
                                             Rfc6455WsInitiator initr = new Rfc6455WsInitiator();
-                                            Rfc822HeaderState.HttpResponse initResponse1 = initr.parseInitiatorRequest(req, ws_uri, host, "initResponse");
+                                            Rfc822HeaderState.HttpResponse initResponse1 = initr.parseInitiatorRequest(req, ws_uri, host, "kvdb");
                                             response = initResponse1.as(ByteBuffer.class);
                                             statusEnum = initResponse1.statusEnum();
                                             int position = cursor.position();
@@ -102,115 +102,74 @@ public class Kouch {
 
                                 @Override
                                 public void onWrite(SelectionKey key) throws Exception {
-                                    if (initResponse == null) ;
                                     if (response.hasRemaining())
                                         socketChannel.write(response);
                                     else
 
                                     {
-                                        if (HttpStatus.$101 != statusEnum) key.cancel();
-                                        Impl initiated = new Impl() {
-                                            @Override
-                                            public void onWrite(SelectionKey key) throws Exception {
-                                                super.onWrite(key);
-                                            }
+                                        if (HttpStatus.$101 != statusEnum) {
+                                            key.cancel();
+                                            return;
+                                        }
+                                        key.interestOps(OP_READ).attach(new Impl() {
 
                                             @Override
                                             public void onRead(SelectionKey key) throws Exception {
 
-                                                if (cursor.position() >= 2) {
-                                                    WebSocketFrame webSocketFrame = new WebSocketFrame();
-                                                    if (webSocketFrame.apply(cursor)) {
-                                                        if (webSocketFrame.payloadLength > cursor.remaining()) {
-                                                            ByteBuffer payload = ByteBuffer.allocateDirect((int) webSocketFrame.payloadLength).put(cursor);
-                                                            Impl fsm = this;
-                                                            new FinishRead(payload, () -> {
-
-                                                                WsFrame wsFrame = WS_FRAME_PACKED_PAYLOAD.get(WsFrame.class, payload);
-                                                                ByteBuffer res = ByteBuffer.allocateDirect(4 << 10);
-
-                                                                DbInfo dbInfo = wsFrame.getDbInfo();
-                                                                if (null != dbInfo) {
-                                                                    String db = dbInfo.getDb();
-                                                                    DbInfoResponse dbInfoResponse = new DbInfoResponse() {
-                                                                        @Override
-                                                                        public boolean getCompactRunning() {
-                                                                            return false;
-                                                                        }
-
-                                                                        @Override
-                                                                        public long getDiskSize() {
-                                                                            return 0;
-                                                                        }
-
-                                                                        @Override
-                                                                        public long getDocCount() {
-                                                                            return 0;
-                                                                        }
-
-                                                                        @Override
-                                                                        public long getDocDel_count() {
-                                                                            return 0;
-                                                                        }
-
-                                                                        @Override
-                                                                        public long getInstanceStart_time() {
-                                                                            return 0;
-                                                                        }
-
-                                                                        @Override
-                                                                        public long getPurgeSeq() {
-                                                                            return 0;
-                                                                        }
-
-                                                                        @Override
-                                                                        public long getUpdateSeq() {
-                                                                            return 0;
-                                                                        }
-
-                                                                        @Override
-                                                                        public String getDbName() {
-                                                                            return db;
-                                                                        }
-
-                                                                        @Override
-                                                                        public String getDiskFormat_version() {
-                                                                            return "blob";
-                                                                        }
-                                                                    };
-                                                                    PackedPayload.create(DbInfoResponse.class).put(dbInfoResponse, res);
-
-                                                                }
-                                                                if (null != payload && payload.hasRemaining()) {
-                                                                    WebSocketFrame webSocketFrame1 = new WebSocketFrameBuilder().createWebSocketFrame();
-                                                                    boolean apply = webSocketFrame1.apply((ByteBuffer) payload.flip());
-                                                                    key.interestOps(OP_WRITE).attach(new FinishWrite(webSocketFrame1.as(payload), () -> key.interestOps(OP_WRITE).attach(new FinishWrite(payload,() -> key.interestOps(OP_READ).attach(fsm)))));
-                                                                } else
-                                                                    key.interestOps(OP_READ).attach(fsm);
-
-                                                            });
-                                                        }
+                                                if (0 == cursor.position()) {
+                                                    if (-1 == socketChannel.read(cursor)) {
+                                                        key.cancel();
+                                                        return;
                                                     }
+
                                                 }
+                                                WebSocketFrame webSocketFrame = new WebSocketFrame();
+                                                int limit = cursor.limit();
+                                                int position = cursor.position();
+                                                if (!webSocketFrame.apply((ByteBuffer) cursor.flip())) {
+                                                    cursor.limit(limit).position(position);
+                                                    return;
+                                                }
+                                                ByteBuffer payload = ByteBuffer.allocateDirect((int) webSocketFrame.payloadLength);
+                                                ByteBuffer t = cursor;
+                                                if (cursor.remaining() > payload.remaining()) {
+                                                    t = (ByteBuffer) cursor.slice().limit(payload.remaining());
+                                                    cursor.position(cursor.position() + payload.remaining());
+                                                }
+                                                payload.put(t);
+
+                                                Impl fsm = this;
+
+                                                key.attach(new FinishRead(payload, () -> {
+                                                    if(webSocketFrame.isMasked)webSocketFrame.applyMask((ByteBuffer) payload.rewind());
+                                                    payload.rewind();
+                                                    System.err.println(StandardCharsets.UTF_8.decode(payload.duplicate()));
+                                                    WsFrame wsFrame = WS_FRAME_PACKED_PAYLOAD.get(WsFrame.class, payload);
+                                                    DbInfo dbInfo = wsFrame.getDbInfo();
+
+                                                    key.interestOps(OP_READ).attach(fsm);
+                                                }));
                                             }
-                                        };
-                                        initiated.onRead(key);
+
+                                        });
                                     }
                                 }
-                            });
 
+                            });
                         }
                     });
-                } catch (Exception e) {
-                    System.out.println("failed startup");
+
+                } catch (IOException e) {
+                    e.printStackTrace();
                 }
             });
             synchronized (exec) {
                 exec.wait();
             }
+        } catch (IOException e) {
+            e.printStackTrace();
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
     }
-
 }
