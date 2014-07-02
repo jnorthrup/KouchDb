@@ -108,7 +108,7 @@ import java.util.function.Function;
 
     @Override
     public Object get(int index) {
-        return byteBufferObjectFunction.apply((ByteBuffer) byteBuffer.duplicate().position(index * per));
+        return byteBufferObjectFunction.apply(PackedPayload.reposition(byteBuffer.duplicate(), index * per));
     }
 
     @Override

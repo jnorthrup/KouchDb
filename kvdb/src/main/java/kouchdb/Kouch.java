@@ -88,9 +88,9 @@ public class Kouch {
                                             response = initResponse1.as(ByteBuffer.class);
                                             statusEnum = initResponse1.statusEnum();
                                             int position = cursor.position();
-                                            cursor.position(req.headerBuf().limit());
+                                            PackedPayload.reposition(cursor,req.headerBuf().limit());
                                             if (cursor.hasRemaining())
-                                                cursor = ByteBuffer.allocateDirect(4 << 10).put(((ByteBuffer) cursor.flip().position(position)).slice());
+                                                cursor = ByteBuffer.allocateDirect(4 << 10).put(((ByteBuffer) PackedPayload.reposition((ByteBuffer) cursor.flip(),position)).slice());
                                             key.interestOps(OP_WRITE);
                                         }
                                     } else {
@@ -127,14 +127,14 @@ public class Kouch {
                                                 int limit = cursor.limit();
                                                 int position = cursor.position();
                                                 if (!webSocketFrame.apply((ByteBuffer) cursor.flip())) {
-                                                    cursor.limit(limit).position(position);
+                                                    PackedPayload.reposition((ByteBuffer) cursor.limit(limit), position);
                                                     return;
                                                 }
                                                 ByteBuffer payload = ByteBuffer.allocateDirect((int) webSocketFrame.payloadLength);
                                                 ByteBuffer t = cursor;
                                                 if (cursor.remaining() > payload.remaining()) {
                                                     t = (ByteBuffer) cursor.slice().limit(payload.remaining());
-                                                    cursor.position(cursor.position() + payload.remaining());
+                                                    PackedPayload.reposition(cursor, cursor.position() + payload.remaining());
                                                 }
                                                 payload.put(t);
 

@@ -46,7 +46,7 @@ public class PackedPayloadTest {
 
             @Override
             public List<ComplexPrautoBean> getChallenge() {
-                ArrayList<ComplexPrautoBean> createOptionses = new ArrayList<>();
+                List<ComplexPrautoBean> createOptionses = new ArrayList<>();
                 createOptionses.add(new ComplexPrautoBean() {
                     @Override
                     public boolean getAutoCompaction() {
@@ -101,7 +101,7 @@ public class PackedPayloadTest {
         };
         PackedPayload<ComplexPrautoBean> createOptionsClassPackedPayload =PackedPayload.create(ComplexPrautoBean.class);
         createOptionsClassPackedPayload.put(complexPrautoBean, byteBuffer);
-        ByteBuffer flip = (ByteBuffer) byteBuffer.flip();
+        ByteBuffer outer = (ByteBuffer) byteBuffer.flip();
 
         System.err.println(StandardCharsets.UTF_8.decode(byteBuffer.duplicate()));
 
@@ -111,10 +111,12 @@ public class PackedPayloadTest {
         System.err.println(toBinaryString(b & 0xff));
 
 
+        PackedPayload<ComplexPrautoBean> complexPrautoBeanPackedPayload = PackedPayload.create(ComplexPrautoBean.class);
         ComplexPrautoBean complexPrautoBean1 =
-        PackedPayload.create(ComplexPrautoBean.class).get(ComplexPrautoBean.class, (ByteBuffer) flip);
+        complexPrautoBeanPackedPayload.get(ComplexPrautoBean.class, outer);
 
-        TheEnum theEnum = complexPrautoBean1.getEnumThingy().get(2);
+        List<TheEnum> enumThingy = complexPrautoBean1.getEnumThingy();
+        TheEnum theEnum = enumThingy.get(2);
         org.junit.Assert.assertEquals( TheEnum.z ,theEnum);
         String cache = complexPrautoBean.getCache();
         String cache1 = complexPrautoBean1.getCache();
