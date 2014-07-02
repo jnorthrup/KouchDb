@@ -32,14 +32,14 @@ public interface ComplexPrautoBean {
 
     @Optional(5)
     @ProtoNumber(5)
-    List<ComplexPrautoBean> getChallenge();
+    List<ComplexPrautoBean> getComplexObject();
 
     @Optional(6)
     @ProtoNumber(6)
-    List<String> getChallenge2();
+    List<String> getStringList();
 
     @Optional(7)
     @ProtoNumber(7)
-    List< TheEnum > getEnumThingy();
+    List< TheEnum > getEnumList();
 
 }

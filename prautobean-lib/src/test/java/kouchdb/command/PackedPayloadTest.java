@@ -1,10 +1,8 @@
 package kouchdb.command;
 
-import junit.framework.Assert;
 import kouchdb.io.PackedPayload;
 import org.junit.Test;
 
-import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -21,7 +19,7 @@ public class PackedPayloadTest {
     public void packTest() {
         BitSet bitSet = new BitSet(6);
         bitSet.set(0, 6);
-        System.err.println(Integer.toBinaryString(bitSet.toByteArray()[0]));
+        System.err.println(toBinaryString(bitSet.toByteArray()[0]));
         ByteBuffer byteBuffer = ByteBuffer.allocateDirect(256 << 10);
         ComplexPrautoBean complexPrautoBean = new ComplexPrautoBean() {
             @Override
@@ -45,7 +43,7 @@ public class PackedPayloadTest {
             }
 
             @Override
-            public List<ComplexPrautoBean> getChallenge() {
+            public List<ComplexPrautoBean> getComplexObject() {
                 List<ComplexPrautoBean> createOptionses = new ArrayList<>();
                 createOptionses.add(new ComplexPrautoBean() {
                     @Override
@@ -69,17 +67,17 @@ public class PackedPayloadTest {
                     }
 
                     @Override
-                    public List<ComplexPrautoBean> getChallenge() {
+                    public List<ComplexPrautoBean> getComplexObject() {
                         return null;
                     }
 
                     @Override
-                    public List<String> getChallenge2() {
-                        return Arrays.asList(new String[]{"c", "d"});
+                    public List<String> getStringList() {
+                        return Arrays.asList(new String[]{"c", "abcdefghijklmnopqrstuvwxyz"});
                     }
 
                     @Override
-                    public List<TheEnum> getEnumThingy() {
+                    public List<TheEnum> getEnumList() {
                         return null;
                     }
                 });
@@ -87,12 +85,12 @@ public class PackedPayloadTest {
             }
 
             @Override
-            public List<String> getChallenge2() {
-                return Arrays.asList("a", "b");
+            public List<String> getStringList() {
+                return Arrays.asList("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "b");
             }
 
             @Override
-            public List<TheEnum> getEnumThingy() {
+            public List<TheEnum> getEnumList() {
                 List<TheEnum> lists =
                         (Arrays.asList(TheEnum.y, TheEnum.y, TheEnum.z));
 
@@ -103,9 +101,9 @@ public class PackedPayloadTest {
         createOptionsClassPackedPayload.put(complexPrautoBean, byteBuffer);
         ByteBuffer outer = (ByteBuffer) byteBuffer.flip();
 
-        System.err.println(StandardCharsets.UTF_8.decode(byteBuffer.duplicate()));
+        System.err.println(StandardCharsets.UTF_8.decode(outer.duplicate()));
 
-        ByteBuffer duplicate = (ByteBuffer) byteBuffer.duplicate();
+        ByteBuffer duplicate = outer.duplicate();
         PackedPayload.readSize(duplicate);
         byte b = duplicate.get();
         System.err.println(toBinaryString(b & 0xff));
@@ -115,7 +113,7 @@ public class PackedPayloadTest {
         ComplexPrautoBean complexPrautoBean1 =
         complexPrautoBeanPackedPayload.get(ComplexPrautoBean.class, outer);
 
-        List<TheEnum> enumThingy = complexPrautoBean1.getEnumThingy();
+        List<TheEnum> enumThingy = complexPrautoBean1.getEnumList();
         TheEnum theEnum = enumThingy.get(2);
         org.junit.Assert.assertEquals( TheEnum.z ,theEnum);
         String cache = complexPrautoBean.getCache();
