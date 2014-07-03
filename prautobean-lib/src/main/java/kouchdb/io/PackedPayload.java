@@ -75,7 +75,7 @@ public class PackedPayload<ProtoMessage> {
 
 
             put(String.class, byteBuffer -> {
-                int anInt = byteBuffer.getInt();
+                int anInt = readSize(byteBuffer);
                 byte[] bytes = new byte[anInt];
                 byteBuffer.get(bytes);
                 return new String(bytes, UTF_8);
@@ -141,7 +141,7 @@ public class PackedPayload<ProtoMessage> {
         } else {
             offsets.put(method, position);
             int anInt = readSize(in);
-            in.position(position + anInt);
+            in.position( in.position() + anInt);
         }
     }
 
@@ -172,7 +172,9 @@ public class PackedPayload<ProtoMessage> {
                 values.put(method, null);
         });
 
-        return (ProtoMessage) Proxy.newProxyInstance(c.getClassLoader(), new Class[]{c}, (proxy, method, args) ->
+        return (ProtoMessage) Proxy.newProxyInstance(c.getClassLoader(),
+                new Class[]{c},
+                (proxy, method, args) ->
                 values.computeIfAbsent(method, k -> offsets.computeIfPresent(k, (k1, v) -> {
                     in.position((Integer) v);
                     int size1 = readSize(in);
@@ -206,7 +208,6 @@ public class PackedPayload<ProtoMessage> {
                             }
                         }
                     }
-
                     return r;
                 })));
 
@@ -228,11 +229,9 @@ public class PackedPayload<ProtoMessage> {
             }
         });
 
-        byte[] src = bitSet.toByteArray();
-        out.put(src);
+        out.put(bitSet.toByteArray());
         nonOpt.forEach(method -> {
             try {
-                Class<?> returnType = method.getReturnType();
                 Object invoke = method.invoke(proto);
                 writeElement(out, invoke, method, null);
             } catch (IllegalAccessException | InvocationTargetException e) {
@@ -242,7 +241,7 @@ public class PackedPayload<ProtoMessage> {
         c.set(0);
         opt.forEach(method -> {
             try {
-                Class<?> returnType = method.getReturnType();
+
                 Object invoke = method.invoke(proto);
                 boolean b = null != invoke;
                 bitSet.set(c.getAndIncrement() + bool.size(), b);
@@ -252,9 +251,10 @@ public class PackedPayload<ProtoMessage> {
             }
 
         });
+        ((ByteBuffer) out.duplicate().position(fixup)).put(bitSet.toByteArray());
         long size = out.position() - fixup;
-
-        writeSize(out, begin, size);out.put(src);
+        writeSize(out, begin, size);
+        out.put(bitSet.toByteArray());
     }
 
     private void writeElement(ByteBuffer out, Object value, Method method, Class forcedClaz) {
@@ -286,7 +286,6 @@ public class PackedPayload<ProtoMessage> {
             List list = (List) value;
             if (VIEWSETTER.containsKey(genericReturnType)) {
                 BiConsumer<ByteBuffer, Object> byteBufferObjectBiConsumer = VIEWSETTER.get(genericReturnType);
-
                 list.forEach(o -> byteBufferObjectBiConsumer.accept(out, o));
             } else if (genericReturnType.isEnum()) list.forEach(o -> {
                 int ordinal = ((Enum) o).ordinal();
@@ -321,9 +320,7 @@ public class PackedPayload<ProtoMessage> {
             writeBuf.put((byte) (size & 0xff));
             writeBuf.put((ByteBuffer) out.duplicate().flip().position(begin + 5));
             out.position(writeBuf.position());
-        } else {
-            writeBuf.put((byte) (255 & 0xff)).putInt((int) (size & 0xffff_ffff));
-        }
+        } else writeBuf.put((byte) 0xff).putInt((int) (size & 0xffff_ffffL));
     }
 
     public static int readSize(ByteBuffer in) {
@@ -331,10 +328,10 @@ public class PackedPayload<ProtoMessage> {
         long size = in.get() & 0xff;
         sanityCheck--;
         if (0xff == size) {
-            size = in.getInt() & 0xffff_ffff;
+            size = in.getInt() & 0xffff_ffffL;
             sanityCheck -= 4;
         }
-        assert sanityCheck >= size;
+        assert sanityCheck >= size:"!-- "+in+"/avail:"+sanityCheck+"\treports a size\t"+size ;
 
         return (int) size;
     }

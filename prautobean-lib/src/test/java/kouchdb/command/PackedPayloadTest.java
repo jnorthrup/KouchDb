@@ -75,7 +75,7 @@ public class PackedPayloadTest {
 
                     @Override
                     public List<String> getChallenge2() {
-                        return Arrays.asList(new String[]{"c", "d"});
+                        return Arrays.asList(new String[]{"c", "dddddddddddd"});
                     }
 
                     @Override
