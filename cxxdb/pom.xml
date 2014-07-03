@@ -4,11 +4,12 @@
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>kouchdb</groupId>
-    <artifactId>parent</artifactId>
+    <artifactId>kouchdb-parent</artifactId>
     <version>0.0.0.1</version>
   </parent>
     <artifactId>cxxdb</artifactId>
-  <version>0.0.0.1</version>
+
+
     <packaging>nar</packaging>
 
     <name>cxxdb</name>

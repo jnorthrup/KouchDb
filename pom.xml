@@ -3,11 +3,9 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>kouchdb</groupId>
-    <artifactId>parent</artifactId>
+    <artifactId>kouchdb-parent</artifactId>
     <version>0.0.0.1</version>
     <packaging>pom</packaging>
-
-    <name>KouchDb parent</name>
     <description>
         KouchDb aims to be the junction between btrfs kernel, boost asio, java NIO[2], and couchdb for deployment of
         rest-based services.
@@ -17,8 +15,6 @@
     </properties>
 
     <modules>
-        <module>prautobean-lib</module>
-        <module>prautobean-maven-plugin</module>
         <module>kvdb-proto</module>
         <module>kvdb</module>
         <module>cxxdb</module>

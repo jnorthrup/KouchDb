@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>kouchdb</groupId>
-        <artifactId>parent</artifactId>
+        <artifactId>kouchdb-parent</artifactId>
         <version>0.0.0.1</version>
     </parent>
 
@@ -17,9 +17,9 @@
     </properties>
     <dependencies>
         <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>prautobean-lib</artifactId>
-            <version>${project.parent.version}</version>
+            <groupId>prautobeans</groupId>
+            <artifactId>prautobeans-lib</artifactId>
+            <version>1.0-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>junit</groupId>
@@ -27,18 +27,15 @@
             <version>4.11</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>rxf</groupId>
+            <artifactId>rxf-core</artifactId>
+            <version>0.9.9.0</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
     <build>
         <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.1</version>
-                <configuration>
-                    <source>1.8</source>
-                    <target>1.8</target>
-                </configuration>
-            </plugin>
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>build-helper-maven-plugin</artifactId>
@@ -56,16 +53,17 @@
                     </execution>
                 </executions>
             </plugin>
+
             <plugin>
-                <groupId>${project.groupId}</groupId>
-                <artifactId>prautobean-maven-plugin</artifactId>
-                <version>0.0.0.1</version>
+                <groupId>prautobeans</groupId>
+                <artifactId>prautobeans-maven-plugin</artifactId>
+                <version>1.0-SNAPSHOT</version>
                 <executions>
                     <execution>
                         <id>generate-sources</id>
                         <phase>generate-sources</phase>
                         <goals>
-                            <goal>prautobean</goal>
+                            <goal>prautobeans</goal>
                         </goals>
                     </execution>
                 </executions>

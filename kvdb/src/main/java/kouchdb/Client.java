@@ -2,13 +2,12 @@ package kouchdb;
 
 import com.google.common.hash.Hashing;
 import com.google.common.io.BaseEncoding;
-import kouchdb.command.*;
 import kouchdb.command.DbInfo;
 import kouchdb.command.DbInfoResponse;
 import kouchdb.command.WsFrame;
-import kouchdb.io.PackedPayload;
 import one.xio.HttpMethod;
 import one.xio.HttpStatus;
+import prauto.io.PackedPayload;
 import rxf.core.Rfc822HeaderState;
 import rxf.core.WebSocketFrame;
 import rxf.core.WebSocketFrameBuilder;
@@ -33,7 +32,6 @@ public class Client {
     public static final Random RANDOM = new Random();
 
     public static void main(String[] args) throws IOException, ExecutionException, InterruptedException {
-
 
 
         AsynchronousSocketChannel asynchronousSocketChannel = AsynchronousSocketChannel.open();
@@ -71,7 +69,7 @@ public class Client {
 
             PackedPayload<WsFrame> wsFramePackedPayload = PackedPayload.create(WsFrame.class);
 
-            WsFrame wsFrame = new WsFrame(){
+            WsFrame wsFrame = new WsFrame() {
                 @Override
                 public DbInfo getDbInfo() {
                     return new DbInfo() {
@@ -98,7 +96,7 @@ public class Client {
             payload.flip();
             DbInfoResponse dbInfoResponse = PackedPayload.create(DbInfoResponse.class).get(DbInfoResponse.class, payload);
 
-            System.err.println(""+dbInfoResponse.getDbName());
+            System.err.println("" + dbInfoResponse.getDbName());
 
         } catch (Throwable e) {
             e.printStackTrace();
