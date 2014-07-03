@@ -147,18 +147,19 @@ public class PackedPayload<ProtoMessage> {
     static void skimOver(ByteBuffer in, Map<Method, Object> offsets, Method method, int position) {
         skimValue(position, offsets, method);
         int size = readSize(in, String.valueOf(method));
-        reposition(in, position + size, "skim " + method);
+        reposition(in, in.position ()+ size, "skim " + method);
     }
 
     private void init(Class theAutoBean) {
         codeSmell.putIfAbsent(theAutoBean, this);
     }
 
-    public <C extends Class<ProtoMessage>> ProtoMessage get(C c, ByteBuffer in___) {
+    public <C extends Class<ProtoMessage>> ProtoMessage get(C c, ByteBuffer source) {
 
-        int begin1 = in___.position();
-
-        long size = readSize(in___);
+        int begin1 = source.position();
+        long size = readSize(source);
+        ByteBuffer in___ = (ByteBuffer) source.duplicate().slice().limit((int) size);
+        source.position((int) (source.position()+size));
         byte[] bytes = new byte[bitsetBytes];
         in___.get(bytes);
         BitSet bitSet = BitSet.valueOf(bytes);
@@ -361,12 +362,9 @@ public class PackedPayload<ProtoMessage> {
             out.putShort((short) (ordinal & 0xffff));
         });
     }
-
     private static void writeSimpleList(ByteBuffer out, List valueToWrite, Class genericReturnType) {
         valueToWrite.forEach(o -> VIEWSETTER.get(genericReturnType).accept(out, o));
     }
-
-
     public static final <T, C extends Class<T>> PackedPayload<T> create(C c) {
         return codeSmell.computeIfAbsent(c, PackedPayload::new);
     }
@@ -401,7 +399,7 @@ public class PackedPayload<ProtoMessage> {
         long size = in.get() & 0xff;
         sanityCheck--;
         if (0xff == size) {
-            size = in.getInt() & 0xffff_ffff;
+            size = in.getInt() & 0xffff_ffffL;
             sanityCheck -= 4;
         }
         if (audit.length > 0) System.err.println("<?> " + size + " :\t" + audit[0]);

@@ -20,7 +20,6 @@ public class PackedPayloadTest {
         BitSet bitSet = new BitSet(6);
         bitSet.set(0, 6);
         System.err.println(toBinaryString(bitSet.toByteArray()[0]));
-        ByteBuffer byteBuffer = ByteBuffer.allocateDirect(256 << 10);
         ComplexPrautoBean complexPrautoBean = new ComplexPrautoBean() {
             @Override
             public boolean getAutoCompaction() {
@@ -73,7 +72,7 @@ public class PackedPayloadTest {
 
                     @Override
                     public List<String> getStringList() {
-                        return Arrays.asList(new String[]{"c", "abcdefghijklmnopqrstuvwxyz"});
+                        return Arrays.asList(new String[]{"c", "abcdefghijklmnopqrstuvwxyd"});
                     }
 
                     @Override
@@ -98,6 +97,8 @@ public class PackedPayloadTest {
             }
         };
         PackedPayload<ComplexPrautoBean> createOptionsClassPackedPayload =PackedPayload.create(ComplexPrautoBean.class);
+        ByteBuffer byteBuffer = ByteBuffer.allocateDirect(1 << 8);
+
         createOptionsClassPackedPayload.put(complexPrautoBean, byteBuffer);
         ByteBuffer outer = (ByteBuffer) byteBuffer.flip();
 
