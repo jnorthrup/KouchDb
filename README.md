@@ -1,6 +1,5 @@
 KouchDb
-=============
-
+======= 
     KouchDb aims to be the junction between kernel VFS, boost asio, java NIO[2], and couchdb for deployment of
     REST-based services.
 
@@ -12,7 +11,7 @@ Features
  * a wire compatible couch entity
  * implementation of websocket sessions and async channels
     * protocol buffer mailbox internals
- * PrautoBeans
+ * PrautoBeans (Done, see https://github.com/jnorthrup/prautobeans)
    * autobean compatible interfaces from src/main/proto
  * a dual language (twin) implementation
     *  a java NIO2 async implementation to leverage the particular strengths of java, and more narrowly defined GWT IO built-ins
