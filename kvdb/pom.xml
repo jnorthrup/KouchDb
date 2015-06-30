@@ -48,9 +48,9 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>rxf</groupId>
+            <groupId>com.github.0xCopy.RelaxFactory</groupId>
             <artifactId>rxf-core</artifactId>
-            <version>0.9.9.0</version>
+            <version>1.0</version>
         </dependency>
     </dependencies>
 

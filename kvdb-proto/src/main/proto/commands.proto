@@ -1,6 +1,5 @@
 package kouchdb.command;
 
-
 option java_package = "kouchdb.command";
 
 option java_outer_classname = "SchemaCommands";
@@ -35,7 +34,7 @@ option java_outer_classname = "SchemaCommands";
             /** You can omit the name argument and specify it via options instead. Note that the name is required.*/
             optional string name = 1;
             /** This turns on auto compaction (experimental). Defaults to false.*/
-            optional bool auto_compaction = 2;
+            optional bool autoCompaction = 2;
             /** Appends a random string to the end of all HTTP  requests to avoid them being cached on IE. Set this to true to prevent this happening  = 9999;*/
             optional string cache = 3;
             /** One of 'idb', 'leveldb', 'websql', or 'http'. If unspecified, PouchDB will infer this automatically, preferring IndexedDB to WebSQL in browsers that support both (i.e. Chrome, Opera and Android 4.4+).*/

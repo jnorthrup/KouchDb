@@ -16,21 +16,18 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
     <dependencies>
-        <dependency>
-            <groupId>prautobeans</groupId>
+        <dependency> 
+            <groupId>com.github.0xCopy.prautobeans</groupId>
             <artifactId>prautobeans-lib</artifactId>
-            <version>1.0-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
-            <version>4.11</version>
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>rxf</groupId>
+            <groupId>com.github.0xCopy.RelaxFactory</groupId>
             <artifactId>rxf-core</artifactId>
-            <version>0.9.9.0</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -54,10 +51,8 @@
                 </executions>
             </plugin>
 
-            <plugin>
-                <groupId>prautobeans</groupId>
+            <plugin><groupId>com.github.0xCopy.prautobeans</groupId>
                 <artifactId>prautobeans-maven-plugin</artifactId>
-                <version>1.0-SNAPSHOT</version>
                 <executions>
                     <execution>
                         <id>generate-sources</id>

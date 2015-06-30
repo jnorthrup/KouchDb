@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>kouchdb</groupId>
@@ -13,12 +14,22 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
-
+    <repositories>
+        <repository>
+            <id>jitpack.io</id>
+            <url>https://jitpack.io</url>
+        </repository>
+    </repositories>
+    <pluginRepositories>
+        <pluginRepository>
+            <id>jitpack.io</id>
+            <url>https://jitpack.io</url></pluginRepository>
+    </pluginRepositories>
     <modules>
         <module>kvdb-proto</module>
         <module>kvdb</module>
         <module>cxxdb</module>
-  </modules>
+    </modules>
 
     <dependencyManagement>
         <dependencies>
@@ -32,6 +43,23 @@
                 <artifactId>maven-plugin-annotations</artifactId>
                 <version>3.4-SNAPSHOT</version>
             </dependency>
+            <dependency>
+                <groupId>com.github.0xCopy.prautobeans</groupId>
+                <artifactId>prautobeans-lib</artifactId>
+                <version>1.0</version>
+            </dependency>
+            <dependency>
+                <groupId>junit</groupId>
+                <artifactId>junit</artifactId>
+                <scope>test</scope>
+                <version>4.12</version>
+            </dependency>
+            <dependency>
+                <groupId>com.github.0xCopy.RelaxFactory</groupId>
+                <artifactId>rxf-core</artifactId>
+                <version>1.0</version>
+                <scope>test</scope>
+            </dependency>
         </dependencies>
     </dependencyManagement>
     <build>
@@ -42,20 +70,20 @@
                     <artifactId>maven-java-formatter-plugin</artifactId>
                     <version>0.4</version>
                 </plugin>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-compiler-plugin</artifactId>
-                    <version>3.1</version>
-                </plugin>
-                <plugin>
+                <!--<plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-site-plugin</artifactId>
                     <version>3.3</version>
-                </plugin>
+                </plugin>--><!--
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-plugin-plugin</artifactId>
-                    <version>3.3-SNAPSHOT</version>
+                    <version>3.5</version>
+                </plugin>-->
+                <plugin>
+                    <groupId>com.github.0xCopy.prautobeans</groupId>
+                    <artifactId>prautobeans-maven-plugin</artifactId>
+                    <version>1.0</version>
                 </plugin>
             </plugins>
         </pluginManagement>
@@ -90,64 +118,55 @@
                     <target>1.8</target>
                 </configuration>
             </plugin>
-
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-site-plugin</artifactId>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-plugin-plugin</artifactId>
-
-            </plugin>
         </plugins>
     </build>
-    <reporting>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-report-plugin</artifactId>
-                <version>2.17</version>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-jxr-plugin</artifactId>
-                <version>2.4</version>
-            </plugin>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>taglist-maven-plugin</artifactId>
-                <version>2.4</version>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-pmd-plugin</artifactId>
-                <version>3.1</version>
-                <configuration>
-                    <targetJdk>${java.specification.version}</targetJdk>
-                    <rulesets>
-                        <!--<ruleset>rulesets/android.xml</ruleset>-->
-                        <ruleset>rulesets/logging-java.xml</ruleset>
-                        <!--<ruleset>rulesets/j2ee.xml</ruleset>-->
-                        <ruleset>rulesets/design.xml</ruleset>
-                        <!--<ruleset>rulesets/basic-jsp.xml</ruleset>-->
-                        <ruleset>rulesets/basic.xml</ruleset>
-                        <ruleset>rulesets/imports.xml</ruleset>
-                        <ruleset>rulesets/typeresolution.xml</ruleset>
-                        <ruleset>rulesets/unusedcode.xml</ruleset>
-                        <ruleset>rulesets/controversial.xml</ruleset>
-                        <ruleset>rulesets/coupling.xml</ruleset>
-                        <ruleset>rulesets/strictexception.xml</ruleset>
-                        <ruleset>rulesets/codesize.xml</ruleset>
-                        <ruleset>rulesets/junit.xml</ruleset>
-                        <ruleset>rulesets/optimizations.xml</ruleset>
-                        <ruleset>rulesets/basic-jsf.xml</ruleset>
-                        <ruleset>rulesets/favorites.xml</ruleset>
-                    </rulesets>
-                </configuration>
-            </plugin>
-        </plugins>
-    </reporting>
+    <!--
+        <reporting>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-report-plugin</artifactId>
+                    <version>2.17</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-jxr-plugin</artifactId>
+                    <version>2.4</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>taglist-maven-plugin</artifactId>
+                    <version>2.4</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-pmd-plugin</artifactId>
+                    <version>3.1</version>
+                    <configuration>
+                        <targetJdk>${java.specification.version}</targetJdk>
+                        <rulesets>
+                            &lt;!&ndash;<ruleset>rulesets/android.xml</ruleset>&ndash;&gt;
+                            <ruleset>rulesets/logging-java.xml</ruleset>
+                            &lt;!&ndash;<ruleset>rulesets/j2ee.xml</ruleset>&ndash;&gt;
+                            <ruleset>rulesets/design.xml</ruleset>
+                            &lt;!&ndash;<ruleset>rulesets/basic-jsp.xml</ruleset>&ndash;&gt;
+                            <ruleset>rulesets/basic.xml</ruleset>
+                            <ruleset>rulesets/imports.xml</ruleset>
+                            <ruleset>rulesets/typeresolution.xml</ruleset>
+                            <ruleset>rulesets/unusedcode.xml</ruleset>
+                            <ruleset>rulesets/controversial.xml</ruleset>
+                            <ruleset>rulesets/coupling.xml</ruleset>
+                            <ruleset>rulesets/strictexception.xml</ruleset>
+                            <ruleset>rulesets/codesize.xml</ruleset>
+                            <ruleset>rulesets/junit.xml</ruleset>
+                            <ruleset>rulesets/optimizations.xml</ruleset>
+                            <ruleset>rulesets/basic-jsf.xml</ruleset>
+                            <ruleset>rulesets/favorites.xml</ruleset>
+                        </rulesets>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </reporting>-->
 
 
 </project>
