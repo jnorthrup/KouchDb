@@ -12,9 +12,16 @@
         rest-based services.
     </description>
     <properties>
+        <protostuff.version>1.0.8</protostuff.version>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
     <repositories>
+        <repository>
+            <id>central</id>
+            <url>http://repo1.maven.org/maven2/</url>
+        </repository>
         <repository>
             <id>jitpack.io</id>
             <url>https://jitpack.io</url>
@@ -23,7 +30,8 @@
     <pluginRepositories>
         <pluginRepository>
             <id>jitpack.io</id>
-            <url>https://jitpack.io</url></pluginRepository>
+            <url>https://jitpack.io</url>
+        </pluginRepository>
     </pluginRepositories>
     <modules>
         <module>kvdb-proto</module>
@@ -33,16 +41,7 @@
 
     <dependencyManagement>
         <dependencies>
-            <dependency>
-                <groupId>org.apache.maven</groupId>
-                <artifactId>maven-plugin-api</artifactId>
-                <version>3.2.1</version>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.maven.plugin-tools</groupId>
-                <artifactId>maven-plugin-annotations</artifactId>
-                <version>3.4-SNAPSHOT</version>
-            </dependency>
+
             <dependency>
                 <groupId>com.github.0xCopy.prautobeans</groupId>
                 <artifactId>prautobeans-lib</artifactId>
@@ -58,7 +57,32 @@
                 <groupId>com.github.0xCopy.RelaxFactory</groupId>
                 <artifactId>rxf-core</artifactId>
                 <version>1.0</version>
-                <scope>test</scope>
+                <scope>compile</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.javolution</groupId>
+                <artifactId>javolution</artifactId>
+                <version>6.0.0</version>
+            </dependency>
+            <dependency>
+                <groupId>com.google.code.gson</groupId>
+                <artifactId>gson</artifactId>
+                <version>2.3.1</version>
+            </dependency>
+            <dependency>
+                <groupId>com.google.guava</groupId>
+                <artifactId>guava</artifactId>
+                <version>18.0</version>
+            </dependency>
+            <dependency>
+                <groupId>com.google.web.bindery</groupId>
+                <artifactId>requestfactory-server</artifactId>
+                <version>2.7.0</version>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>kvdb-proto</artifactId>
+                <version>0.0.0.1</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -93,6 +117,7 @@
                 <artifactId>maven-java-formatter-plugin</artifactId>
                 <executions>
                     <execution>
+                        <id>fmt</id>
                         <goals>
                             <goal>format</goal>
                         </goals>
@@ -108,14 +133,6 @@
                     <!--http://code.google.com/p/google-web-toolkit/source/browse/trunk/eclipse/settings/code-style/gwt-format.xml</configFile>&ndash;&gt;-->
                     <!--<configFile>${project.basedir}/../fmt/gwt-format.xml</configFile>-->
                     <lineEnding>LF</lineEnding>
-                </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <configuration>
-                    <source>1.8</source>
-                    <target>1.8</target>
                 </configuration>
             </plugin>
         </plugins>

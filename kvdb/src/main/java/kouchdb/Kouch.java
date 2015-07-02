@@ -2,15 +2,13 @@ package kouchdb;
 
 import kouchdb.command.DbInfo;
 import kouchdb.command.WsFrame;
- 
 import one.xio.HttpStatus;
 import prauto.io.PackedPayload;
-import rxf.core.*;
+import rxf.core.Rfc6455WsInitiator;
+import rxf.core.Rfc822HeaderState;
+import rxf.core.WebSocketFrame;
 
 import java.io.IOException;
-
-import java.lang.Override;
-import java.lang.String;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -22,10 +20,10 @@ import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import static java.nio.channels.SelectionKey.OP_ACCEPT;
-import static java.nio.channels.SelectionKey.OP_READ;
-import static java.nio.channels.SelectionKey.OP_WRITE;
-import static one.xio.AsioVisitor.*;
+import static java.nio.channels.SelectionKey.*;
+import static one.xio.AsioVisitor.Impl;
+import static one.xio.AsyncSingletonServer.SingleThreadSingletonServer.enqueue;
+import static one.xio.AsyncSingletonServer.SingleThreadSingletonServer.init;
 
 /**
  * Created by jim on 4/11/14.
@@ -56,8 +54,8 @@ public class Kouch {
             ExecutorService exec = Executors.newCachedThreadPool();
             exec.submit(() -> {
                 try {
-                    Server.enqueue(serverSocketChannel, OP_ACCEPT);
-                    Server.init(new Impl() {
+                    enqueue(serverSocketChannel, OP_ACCEPT);
+                    init(new Impl() {
 
 
                         @Override
@@ -66,7 +64,7 @@ public class Kouch {
                             ServerSocketChannel c = (ServerSocketChannel) key.channel();
                             SocketChannel socketChannel = c.accept();
                             socketChannel.configureBlocking(false);
-                            Server.enqueue(socketChannel, OP_READ, new Impl() {
+                            enqueue(socketChannel, OP_READ, new Impl() {
                                 ByteBuffer cursor = ByteBuffer.allocateDirect(4 << 10);
                                 public Rfc822HeaderState.HttpRequest req;
                                 public HttpStatus statusEnum;
@@ -76,7 +74,7 @@ public class Kouch {
                                     int read = socketChannel.read(cursor);
                                     if (-1 != read) {
                                         if (null == req)
-                                            req = Rfc6455WsInitiator.req();
+                                            req = Rfc6455WsInitiator.req("/_connect",host,"","ws://");
                                         ByteBuffer buf = (ByteBuffer) cursor.duplicate().flip();
                                         boolean apply = req.apply(buf);
                                         if (apply) {
@@ -137,8 +135,9 @@ public class Kouch {
 
                                                 Impl fsm = this;
 
-                                                key.attach(new FinishRead(payload, () -> {
-                                                    if(webSocketFrame.isMasked)webSocketFrame.applyMask((ByteBuffer) payload.rewind());
+                                                key.attach(Helper.finishRead(payload, () -> {
+                                                    if (webSocketFrame.isMasked)
+                                                        webSocketFrame.applyMask((ByteBuffer) payload.rewind());
                                                     payload.rewind();
                                                     System.err.println(StandardCharsets.UTF_8.decode(payload.duplicate()));
                                                     WsFrame wsFrame = WS_FRAME_PACKED_PAYLOAD.get(WsFrame.class, payload);

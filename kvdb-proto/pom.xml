@@ -29,6 +29,12 @@
             <groupId>com.github.0xCopy.RelaxFactory</groupId>
             <artifactId>rxf-core</artifactId>
             <scope>test</scope>
+            <exclusions>
+            	<exclusion>
+            		<artifactId>1xio</artifactId>
+            		<groupId>com.github.0xCopy</groupId>
+            	</exclusion>
+            </exclusions>
         </dependency>
     </dependencies>
     <build>
@@ -38,14 +44,17 @@
                 <artifactId>build-helper-maven-plugin</artifactId>
                 <executions>
                     <execution>
+                        <id>autobeans</id>
                         <phase>generate-sources</phase>
                         <goals>
                             <goal>add-source</goal>
                         </goals>
                         <configuration>
+
                             <sources>
-                                <source>${project.build.directory}/generated-sources/</source>
+                                <source>${project.build.directory}/generated-sources</source>
                             </sources>
+
                         </configuration>
                     </execution>
                 </executions>
