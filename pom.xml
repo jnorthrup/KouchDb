@@ -36,16 +36,17 @@
     <modules>
         <module>kvdb-proto</module>
         <module>kvdb</module>
-        <module>cxxdb</module>
     </modules>
+    <profiles><profile><id>withNative</id>    <modules>
+        <module>cxxdb</module>
+    </modules></profile></profiles>
 
     <dependencyManagement>
         <dependencies>
-
             <dependency>
                 <groupId>com.github.0xCopy.prautobeans</groupId>
                 <artifactId>prautobeans-lib</artifactId>
-                <version>1.0</version>
+                <version>-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>junit</groupId>
@@ -56,7 +57,7 @@
             <dependency>
                 <groupId>com.github.0xCopy.RelaxFactory</groupId>
                 <artifactId>rxf-core</artifactId>
-                <version>[1.0,)</version>
+                <version>-SNAPSHOT</version>
                 <scope>compile</scope>
             </dependency>
             <dependency>
