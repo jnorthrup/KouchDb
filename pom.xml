@@ -56,7 +56,7 @@
             <dependency>
                 <groupId>com.github.0xCopy.RelaxFactory</groupId>
                 <artifactId>rxf-core</artifactId>
-                <version>1.0</version>
+                <version>[1.0,)</version>
                 <scope>compile</scope>
             </dependency>
             <dependency>
