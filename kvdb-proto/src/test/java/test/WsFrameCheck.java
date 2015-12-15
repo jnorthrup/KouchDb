@@ -5,7 +5,6 @@ import kouchdb.command.DbInfo;
 import org.junit.Test;
 import prauto.io.PackedPayload;
 
-
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
