@@ -32,5 +32,3 @@ longer terms goals:
  - [ ] bonding nodes for n>1 record storage across a collection of shards
  - [ ] online shard reconfiguration - "noisey mode" for each permutation of key, value, and paired storage, shard should create a new packed index and from the slots it has and scatter-gather the slots it doesn't have.
  - [ ] add riak and mongo flavors.  emulate casandra with c in java, see where it leads.  
-
- 
