@@ -3,6 +3,12 @@
          xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
     <modelVersion>4.0.0</modelVersion>
+    <dependencies>
+        <dependency>
+            <groupId>com.github.0xCopy</groupId>
+            <artifactId>bbcursive</artifactId>
+        </dependency>
+    </dependencies>
     <parent>
         <groupId>kouchdb</groupId>
         <artifactId>kouchdb-parent</artifactId>
@@ -14,65 +20,5 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
-    <dependencies>
-        <!--<dependency>-->
-            <!--<groupId>org.javolution</groupId>-->
-            <!--<artifactId>javolution</artifactId>-->
-        <!--</dependency>-->
-        <dependency>
-            <groupId>com.google.code.gson</groupId>
-            <artifactId>gson</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.google.web.bindery</groupId>
-            <artifactId>requestfactory-server</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>kvdb-proto</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.github.0xCopy.RelaxFactory</groupId>
-            <artifactId>rxf-core</artifactId>
-        </dependency><!--
-        <dependency>
-            <groupId>com.github.0xCopy.RelaxFactory</groupId>
-            <artifactId>rxf-couch</artifactId>
-            <version>1.0</version>
-        </dependency>
-        <dependency>
-            <groupId>com.github.0xCopy.RelaxFactory</groupId>
-            <artifactId>rxf-guice</artifactId>
-            <version>1.0</version>
-        </dependency>
-        <dependency>
-            <groupId>com.github.0xCopy.RelaxFactory</groupId>
-            <artifactId>rxf-pouch</artifactId>
-            <version>1.0</version>
-        </dependency>
-        <dependency>
-            <groupId>com.github.0xCopy.RelaxFactory</groupId>
-            <artifactId>rxf-rpc</artifactId>
-            <version>1.0</version>
-        </dependency>
-        <dependency>
-            <groupId>com.github.0xCopy.RelaxFactory</groupId>
-            <artifactId>rxf-rsync</artifactId>
-            <version>1.0</version>
-        </dependency>
-        <dependency>
-            <groupId>com.github.0xCopy.RelaxFactory</groupId>
-            <artifactId>rxf-shared</artifactId>
-            <version>1.0</version>
-        </dependency>
--->    </dependencies>
+
 </project>

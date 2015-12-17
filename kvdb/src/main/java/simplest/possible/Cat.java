@@ -16,15 +16,20 @@ import java.util.function.Consumer;
  * highly unsafe
  */
 public class Cat implements Consumer<String> {
+
     public static void main(String... args) {
 
-        if (args.length == 0) {
+        if (args.length > 0) {
+            cat(args[0]);
+        } else {
             String x = String.valueOf(Paths.get("").toAbsolutePath());
-            System.err.println(x);
-            return;
+            System.err.println("you are in "+x);
+            System.exit(1);
         }
-        new Cat().accept(args[0]);
+    }
 
+    public  static void cat(String arg) {
+        new Cat().accept(arg);
     }
 
     public static String saferKey(String arg) {
